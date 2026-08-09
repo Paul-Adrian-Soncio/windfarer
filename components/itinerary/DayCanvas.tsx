@@ -38,8 +38,8 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
   }
 
   return (
-    <div className="flex w-72 shrink-0 flex-col gap-3 rounded-card bg-primary-50/50 p-3">
-      <div className="flex items-center justify-between gap-1 px-1">
+    <div className="flex w-[290px] shrink-0 flex-col gap-3 rounded-card border border-hair bg-paper-2 p-3.5">
+      <div className="flex items-center justify-between gap-1 px-0.5">
         {editingLabel ? (
           <div className="flex flex-1 items-center gap-1">
             <Input
@@ -49,27 +49,27 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
               onKeyDown={(e) => e.key === "Enter" && commitLabel()}
               className="py-1 text-sm"
             />
-            <button onClick={commitLabel} className="rounded-full p-1.5 text-primary-600 hover:bg-primary-100">
+            <button onClick={commitLabel} className="rounded-lg p-1.5 text-primary-700 hover:bg-primary-tint">
               <Check className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <>
-            <h3 className="font-display text-sm font-semibold text-ink-900">{day.label}</h3>
+            <h3 className="font-display text-[15px] font-bold text-ink-900">{day.label}</h3>
             <div className="flex gap-0.5">
               <button
                 onClick={() => {
                   setLabelDraft(day.label);
                   setEditingLabel(true);
                 }}
-                className="rounded-full p-1.5 text-ink-300 hover:bg-primary-100 hover:text-primary-600"
+                className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-primary-700"
                 aria-label="Rename day"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => removeDay(day.id)}
-                className="rounded-full p-1.5 text-ink-300 hover:bg-danger-500/10 hover:text-danger-600"
+                className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-danger-600"
                 aria-label="Remove day"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -81,8 +81,8 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
 
       <div
         ref={setNodeRef}
-        className={`flex min-h-[80px] flex-col gap-2 rounded-xl p-1 transition-colors ${
-          isOver ? "bg-primary-100/70" : ""
+        className={`flex min-h-[80px] flex-col gap-2.5 rounded-xl p-1 transition-colors ${
+          isOver ? "bg-primary-tint/70" : ""
         }`}
       >
         <SortableContext items={day.blockIds} strategy={verticalListSortingStrategy}>
@@ -96,15 +96,15 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
           ))}
         </SortableContext>
         {dayBlocks.length === 0 && (
-          <p className="px-2 py-3 text-center text-xs text-ink-400">Drag blocks here, or add one below.</p>
+          <p className="px-2 py-3 text-center text-xs text-ink-500">Drag blocks here, or add one below.</p>
         )}
       </div>
 
       <button
         onClick={() => setShowAdd(true)}
-        className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary-300 py-2 text-sm font-medium text-primary-600 hover:bg-primary-100/60"
+        className="flex items-center justify-center gap-1.5 rounded-sm border-[1.5px] border-dashed border-secondary-500 py-[11px] text-[13px] font-semibold text-primary-700 hover:bg-surface-2"
       >
-        <Plus className="h-4 w-4" /> Add block
+        <Plus className="h-[15px] w-[15px]" strokeWidth={2.2} /> Add block
       </button>
 
       <BlockEditorModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(block) => addBlock(day.id, block)} />

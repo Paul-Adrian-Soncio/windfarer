@@ -16,14 +16,16 @@ export default function ItineraryPage() {
   return (
     <TripGate>
       {trip && (
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="font-display text-2xl font-bold text-ink-900">Itinerary Planner</h1>
-              <p className="mt-1 text-sm text-ink-500">Build out each day once you've landed — drag blocks to rearrange.</p>
+              <h1 className="font-display text-[27px] font-bold tracking-tight text-ink-900">Itinerary Planner</h1>
+              <p className="mt-1 text-[14.5px] text-ink-500">
+                Build out each day once you've landed — drag blocks to rearrange.
+              </p>
             </div>
             <Button variant="accent" onClick={() => addDay()}>
-              <Plus className="h-4 w-4" /> Add day
+              <Plus className="h-4 w-4" strokeWidth={2.4} /> Add day
             </Button>
           </div>
 
@@ -40,7 +42,7 @@ export default function ItineraryPage() {
             />
           ) : (
             <ItineraryDndContext days={trip.itineraryDays} blocks={blocks}>
-              <div className="flex gap-4 overflow-x-auto pb-4">
+              <div className="flex gap-[15px] overflow-x-auto pb-2 pt-1">
                 {trip.itineraryDays.map((day) => (
                   <DayCanvas key={day.id} day={day} blocks={blocks} />
                 ))}

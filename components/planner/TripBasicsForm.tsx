@@ -50,8 +50,8 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Compass className="h-5 w-5 text-primary-500" />
+        <CardTitle>
+          <Compass className="h-[19px] w-[19px] text-primary-700" strokeWidth={1.9} />
           Where are you headed?
         </CardTitle>
       </CardHeader>

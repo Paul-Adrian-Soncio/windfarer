@@ -12,7 +12,7 @@ export function TripGate({ children }: { children: ReactNode }) {
   const trip = useTripStore((s) => s.trip);
 
   if (!hasHydrated) {
-    return <div className="py-24 text-center text-sm text-ink-400">Loading your trip…</div>;
+    return <div className="py-24 text-center text-sm text-ink-500">Loading your trip…</div>;
   }
 
   if (!trip) {

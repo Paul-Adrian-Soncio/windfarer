@@ -11,14 +11,14 @@ export default function PlannerPage() {
   const hasHydrated = useTripStore((s) => s.hasHydrated);
 
   if (!hasHydrated) {
-    return <div className="py-24 text-center text-sm text-ink-400">Loading your trip…</div>;
+    return <div className="py-24 text-center text-sm text-ink-500">Loading your trip…</div>;
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="font-display text-2xl font-bold text-ink-900">Travel Planner</h1>
-        <p className="mt-1 text-sm text-ink-500">Let's map out how you're getting there and where you'll land.</p>
+        <h1 className="font-display text-[27px] font-bold tracking-tight text-ink-900">Travel Planner</h1>
+        <p className="mt-1 text-[14.5px] text-ink-500">Let's map out how you're getting there and where you'll land.</p>
       </div>
 
       <TripBasicsForm trip={trip} />

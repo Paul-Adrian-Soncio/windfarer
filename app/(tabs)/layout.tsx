@@ -6,7 +6,9 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     <>
       <AppHeader />
       <TabNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 animate-[fade-in-up_0.35s_ease] px-4 py-6 sm:px-6 sm:py-7">
+        {children}
+      </main>
     </>
   );
 }

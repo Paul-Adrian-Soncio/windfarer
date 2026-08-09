@@ -1,5 +1,5 @@
 import { MapPin, CalendarDays, Hotel } from "lucide-react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Trip } from "@/types";
 
 function formatDate(date: string) {
@@ -9,22 +9,20 @@ function formatDate(date: string) {
 export function TripSummaryCard({ trip }: { trip: Trip }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary-500" />
-          {trip.destination.name || "Untitled trip"}
-        </CardTitle>
-      </CardHeader>
-      <div className="flex flex-col gap-3 text-sm text-ink-600">
+      <div className="flex items-center gap-2 font-display text-[22px] font-bold text-ink-900">
+        <MapPin className="h-5 w-5 text-accent-500" strokeWidth={2} />
+        {trip.destination.name || "Untitled trip"}
+      </div>
+      <div className="mt-3 flex flex-col gap-2.5 text-sm text-ink-700">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-ink-400" />
-          <span>
+          <CalendarDays className="h-[17px] w-[17px] shrink-0 text-secondary-ink" strokeWidth={1.9} />
+          <span className="font-mono text-[13.5px] text-ink-900">
             {formatDate(trip.departureDate)} → {formatDate(trip.returnDate)}
           </span>
         </div>
         {trip.accommodations.length > 0 && (
           <div className="flex items-center gap-2">
-            <Hotel className="h-4 w-4 text-ink-400" />
+            <Hotel className="h-[17px] w-[17px] shrink-0 text-secondary-ink" strokeWidth={1.9} />
             <span>
               {trip.accommodations.length} stay{trip.accommodations.length > 1 ? "s" : ""} planned
             </span>

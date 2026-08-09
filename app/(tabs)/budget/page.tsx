@@ -15,10 +15,10 @@ export default function BudgetPage() {
   return (
     <TripGate>
       {trip && spentByCategory && budgetVsActual && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold text-ink-900">Budget</h1>
-            <p className="mt-1 text-sm text-ink-500">Everything you've planned to spend, in one place.</p>
+            <h1 className="font-display text-[27px] font-bold tracking-tight text-ink-900">Budget</h1>
+            <p className="mt-1 text-[14.5px] text-ink-500">Everything you've planned to spend, in one place.</p>
           </div>
 
           <BudgetSummaryCards trip={trip} totalSpent={totalSpent} spentByCategory={spentByCategory} />

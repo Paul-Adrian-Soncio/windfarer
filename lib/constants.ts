@@ -19,13 +19,21 @@ export const TRAVEL_MODE_OPTIONS: { value: TravelMode; label: string; icon: type
   { value: "other", label: "Other", icon: Circle },
 ];
 
-export const BLOCK_TYPE_OPTIONS: { value: BlockType; label: string; icon: typeof Compass; colorClass: string }[] = [
-  { value: "activity", label: "Activity", icon: Compass, colorClass: "bg-primary-100 text-primary-700" },
-  { value: "meal", label: "Meal", icon: UtensilsCrossed, colorClass: "bg-accent-100 text-accent-700" },
-  { value: "visit", label: "Visit", icon: Landmark, colorClass: "bg-primary-100 text-primary-800" },
-  { value: "rest", label: "Rest", icon: Sofa, colorClass: "bg-ink-100 text-ink-700" },
-  { value: "travel", label: "Travel", icon: Navigation, colorClass: "bg-success-500/15 text-success-600" },
-  { value: "blank", label: "Custom", icon: SquareDashedBottom, colorClass: "bg-ink-100 text-ink-600" },
+// colorClass: chip background used in the block-type picker.
+// borderClass: 3px left-border accent used on itinerary block cards (see mockup .block.t-*).
+export const BLOCK_TYPE_OPTIONS: {
+  value: BlockType;
+  label: string;
+  icon: typeof Compass;
+  colorClass: string;
+  borderClass: string;
+}[] = [
+  { value: "activity", label: "Activity", icon: Compass, colorClass: "bg-secondary-tint text-secondary-ink", borderClass: "border-l-secondary-500" },
+  { value: "meal", label: "Meal", icon: UtensilsCrossed, colorClass: "bg-accent-tint text-accent-500", borderClass: "border-l-accent-500" },
+  { value: "visit", label: "Visit", icon: Landmark, colorClass: "bg-primary-tint text-primary-700", borderClass: "border-l-primary-700" },
+  { value: "rest", label: "Rest", icon: Sofa, colorClass: "bg-ink-100 text-ink-700", borderClass: "border-l-ink-400" },
+  { value: "travel", label: "Travel", icon: Navigation, colorClass: "bg-moss-tint text-moss", borderClass: "border-l-moss" },
+  { value: "blank", label: "Custom", icon: SquareDashedBottom, colorClass: "bg-ink-100 text-ink-600", borderClass: "border-l-ink-300" },
 ];
 
 export function getTravelModeOption(mode: TravelMode) {

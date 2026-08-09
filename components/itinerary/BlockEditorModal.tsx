@@ -47,17 +47,19 @@ export function BlockEditorModal({ open, onClose, onSubmit, initial }: BlockEdit
     <Modal open={open} onClose={onClose} title={initial ? "Edit block" : "Add a block"}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Type">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-[7px]">
             {BLOCK_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setType(value)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  type === value ? "border-primary-500 bg-primary-50 text-primary-700" : "border-ink-200 text-ink-600"
+                className={`flex min-w-[60px] flex-1 flex-col items-center gap-[5px] rounded-xl border-[1.5px] py-2.5 text-[11px] font-semibold transition-colors ${
+                  type === value
+                    ? "border-primary-700 bg-primary-tint text-primary-700"
+                    : "border-hair bg-surface-2 text-ink-700"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                 {label}
               </button>
             ))}

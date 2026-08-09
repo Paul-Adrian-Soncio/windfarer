@@ -5,9 +5,9 @@ import { Wallet, Pencil, Check } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
 import { useTripStore } from "@/store/tripStore";
 import { SpentByCategory } from "@/lib/budget/aggregate";
+import { fmtMoney } from "@/lib/money";
 import { Trip } from "@/types";
 
 const CATEGORY_LABELS: Record<keyof SpentByCategory, string> = {
@@ -39,42 +39,45 @@ export function BudgetSummaryCards({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <Card className="lg:col-span-1">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary-500" />
+    <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr]">
+      <Card>
+        <CardHeader className="mb-0!">
+          <CardTitle>
+            <Wallet className="h-[19px] w-[19px] text-primary-700" strokeWidth={1.9} />
             Total budget
           </CardTitle>
           {!editing && (
-            <button onClick={() => setEditing(true)} className="rounded-full p-1.5 text-ink-300 hover:bg-primary-50 hover:text-primary-600">
+            <button onClick={() => setEditing(true)} className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-primary-700">
               <Pencil className="h-4 w-4" />
             </button>
           )}
         </CardHeader>
 
         {editing ? (
-          <div className="flex items-center gap-2">
+          <div className="mt-4 flex items-center gap-2">
             <Input type="number" min="0" step="0.01" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="0.00" />
-            <Button size="sm" onClick={commit}>
+            <button onClick={commit} className="shrink-0 rounded-lg p-2.5 text-primary-700 hover:bg-primary-tint">
               <Check className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         ) : (
           <>
-            <p className="font-display text-3xl font-bold text-ink-900">
-              {totalBudget !== null ? `$${totalBudget.toFixed(2)}` : "Not set"}
+            <p className="mb-3 mt-1.5 font-display text-[32px] font-bold tracking-tight text-ink-900">
+              {totalBudget !== null ? fmtMoney(totalBudget) : "Not set"}
             </p>
             {totalBudget !== null && (
               <>
-                <ProgressBar value={totalSpent} max={totalBudget} className="mt-4" />
-                <p className="mt-2 text-sm text-ink-500">
-                  ${totalSpent.toFixed(2)} spent
+                <ProgressBar value={totalSpent} max={totalBudget} />
+                <p className="mt-2.5 text-[13px] text-ink-500">
+                  <b className="font-semibold text-ink-900">{fmtMoney(totalSpent)}</b> spent
                   {remaining !== null && (
-                    <span className={remaining < 0 ? "text-danger-600" : "text-ink-500"}>
+                    <>
                       {" "}
-                      · {remaining < 0 ? "over by" : "remaining"} ${Math.abs(remaining).toFixed(2)}
-                    </span>
+                      · <b className="font-semibold text-ink-900">{fmtMoney(Math.abs(remaining))}</b>{" "}
+                      <span className={remaining < 0 ? "text-danger-600" : undefined}>
+                        {remaining < 0 ? "over" : "remaining"}
+                      </span>
+                    </>
                   )}
                 </p>
               </>
@@ -83,15 +86,15 @@ export function BudgetSummaryCards({
         )}
       </Card>
 
-      <Card className="lg:col-span-2">
+      <Card>
         <CardHeader>
           <CardTitle>Spent by category</CardTitle>
         </CardHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-[11px] sm:grid-cols-2">
           {(Object.keys(spentByCategory) as (keyof SpentByCategory)[]).map((key) => (
-            <div key={key} className="flex items-center justify-between rounded-xl bg-primary-50/60 px-4 py-3">
-              <span className="text-sm text-ink-600">{CATEGORY_LABELS[key]}</span>
-              <span className="font-display text-sm font-semibold text-ink-900">${spentByCategory[key].toFixed(2)}</span>
+            <div key={key} className="flex items-center justify-between rounded-md border border-hair bg-surface-2 px-[15px] py-3.5">
+              <span className="text-[13.5px] text-ink-700">{CATEGORY_LABELS[key]}</span>
+              <span className="font-display text-[15px] font-bold text-ink-900">{fmtMoney(spentByCategory[key])}</span>
             </div>
           ))}
         </div>

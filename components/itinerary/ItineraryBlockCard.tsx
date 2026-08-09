@@ -2,8 +2,10 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, Clock, DollarSign } from "lucide-react";
+import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { BlockTypeIcon } from "./BlockTypeIcon";
+import { getBlockTypeOption } from "@/lib/constants";
+import { fmtMoney } from "@/lib/money";
 import { ItineraryBlock } from "@/types";
 import { cn } from "@/lib/cn";
 
@@ -16,6 +18,7 @@ interface ItineraryBlockCardProps {
 
 export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: ItineraryBlockCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const { borderClass } = getBlockTypeOption(block.type);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -27,47 +30,43 @@ export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: Itinera
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-start gap-2 rounded-xl border border-ink-100 bg-white p-3 transition-shadow",
+        "relative rounded-sm border border-hair border-l-[3px] bg-surface p-3 pl-[13px] shadow-[0_6px_16px_-12px_rgba(43,39,33,0.4)] transition-shadow",
+        borderClass,
         isDragging && "opacity-40",
-        overlay && "shadow-lift scale-[1.02]"
+        overlay && "scale-[1.02] shadow-lift"
       )}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="mt-1 shrink-0 cursor-grab touch-none rounded p-1 text-ink-300 hover:text-ink-500 active:cursor-grabbing"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="shrink-0 cursor-grab touch-none rounded p-0.5 text-ink-500 hover:text-ink-700 active:cursor-grabbing"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
 
-      <BlockTypeIcon type={block.type} className="mt-0.5 shrink-0" />
+        <BlockTypeIcon type={block.type} className="shrink-0 bg-paper! p-1.5!" />
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-ink-900">{block.title}</p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-500">
-          {block.scheduledTime && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {block.scheduledTime}
-            </span>
-          )}
-          {block.plannedExpense !== undefined && (
-            <span className="flex items-center gap-1">
-              <DollarSign className="h-3 w-3" /> {block.plannedExpense.toFixed(2)}
-            </span>
-          )}
+        <p className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink-900">{block.title}</p>
+
+        <div className="flex shrink-0 gap-0.5">
+          <button onClick={onEdit} className="rounded-lg p-1 text-ink-500 hover:bg-primary-tint hover:text-primary-700" aria-label="Edit block">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onRemove} className="rounded-lg p-1 text-ink-500 hover:bg-danger-tint hover:text-danger-600" aria-label="Remove block">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
-        {block.description && <p className="mt-1 truncate text-xs text-ink-400">{block.description}</p>}
       </div>
 
-      <div className="flex shrink-0 gap-0.5">
-        <button onClick={onEdit} className="rounded-full p-1.5 text-ink-300 hover:bg-primary-50 hover:text-primary-600" aria-label="Edit block">
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button onClick={onRemove} className="rounded-full p-1.5 text-ink-300 hover:bg-danger-500/10 hover:text-danger-600" aria-label="Remove block">
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      {(block.scheduledTime || block.plannedExpense !== undefined) && (
+        <div className="ml-[34px] mt-2 flex gap-3.5 font-mono text-[11.5px] text-secondary-ink">
+          {block.scheduledTime && <span>{block.scheduledTime}</span>}
+          {block.plannedExpense !== undefined && <span>{fmtMoney(block.plannedExpense)}</span>}
+        </div>
+      )}
+      {block.description && <p className="ml-[34px] mt-[5px] text-xs text-ink-500">{block.description}</p>}
     </div>
   );
 }

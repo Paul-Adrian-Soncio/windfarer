@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PartyPopper, Plane } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { PartyPopper } from "lucide-react";
 import { getCountdown } from "@/lib/date/countdown";
 
 export function CountdownCard({ departureDate, departureTime }: { departureDate: string; departureTime?: string }) {
@@ -14,32 +13,36 @@ export function CountdownCard({ departureDate, departureTime }: { departureDate:
   }, [departureDate, departureTime]);
 
   return (
-    <Card className="bg-hero-gradient text-white border-none">
-      <div className="flex items-center gap-2 text-primary-100">
-        <Plane className="h-4 w-4" />
-        <span className="text-xs font-medium uppercase tracking-wide">Countdown to departure</span>
-      </div>
+    <div className="relative overflow-hidden rounded-card bg-countdown-gradient p-[22px] text-[#F1EFE6] shadow-card">
+      <span className="absolute right-4 top-4 opacity-50">
+        <svg viewBox="0 0 24 24" className="h-[26px] w-[26px] -rotate-12 fill-[#CFE0D3]">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v5z" />
+        </svg>
+      </span>
+      <span className="font-mono text-[11px] uppercase tracking-[.13em] text-[#BFD6C5]">
+        Countdown to departure
+      </span>
       {countdown.isPast ? (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3.5 flex items-center gap-2">
           <PartyPopper className="h-7 w-7 text-accent-300" />
-          <p className="font-display text-2xl font-semibold">Bon voyage!</p>
+          <p className="font-display text-2xl font-bold">Bon voyage!</p>
         </div>
       ) : (
-        <div className="mt-3 flex items-baseline gap-4">
+        <div className="mt-3.5 flex items-baseline gap-4">
           <div>
-            <span className="font-display text-4xl font-bold">{countdown.days}</span>
-            <span className="ml-1.5 text-sm text-primary-100">days</span>
+            <span className="font-display text-[42px] font-bold leading-none text-white">{countdown.days}</span>
+            <span className="ml-[3px] text-[13px] text-[#C6DBCC]">days</span>
           </div>
           <div>
-            <span className="font-display text-2xl font-semibold">{countdown.hours}</span>
-            <span className="ml-1 text-xs text-primary-100">hrs</span>
+            <span className="font-display text-2xl font-bold text-white">{countdown.hours}</span>
+            <span className="ml-1 text-xs text-[#C6DBCC]">hrs</span>
           </div>
           <div>
-            <span className="font-display text-2xl font-semibold">{countdown.minutes}</span>
-            <span className="ml-1 text-xs text-primary-100">min</span>
+            <span className="font-display text-2xl font-bold text-white">{countdown.minutes}</span>
+            <span className="ml-1 text-xs text-[#C6DBCC]">min</span>
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

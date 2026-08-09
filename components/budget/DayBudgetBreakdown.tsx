@@ -7,7 +7,9 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Input } from "@/components/ui/Input";
 import { useTripStore } from "@/store/tripStore";
 import { BudgetVsActual } from "@/lib/budget/aggregate";
+import { fmtMoney } from "@/lib/money";
 import { Trip } from "@/types";
+import { cn } from "@/lib/cn";
 
 function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentAmount: number | null }) {
   const upsertAllocation = useTripStore((s) => s.upsertAllocation);
@@ -30,7 +32,7 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="mt-2 flex items-center gap-1.5">
         <Input
           type="number"
           min="0"
@@ -41,7 +43,7 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
           onKeyDown={(e) => e.key === "Enter" && commit()}
           className="w-24 py-1 text-xs"
         />
-        <button onClick={commit} className="rounded-full p-1 text-primary-600 hover:bg-primary-50">
+        <button onClick={commit} className="rounded-lg p-1 text-primary-700 hover:bg-primary-tint">
           <Check className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -49,9 +51,16 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
   }
 
   return (
-    <button onClick={() => setEditing(true)} className="flex items-center gap-1 text-xs text-ink-400 hover:text-primary-600">
-      {currentAmount !== null ? `Budget: $${currentAmount.toFixed(2)}` : "Set day budget"}
-      <Pencil className="h-3 w-3" />
+    <button
+      onClick={() => setEditing(true)}
+      className="mt-2 flex items-center gap-1.5 text-xs text-ink-500 hover:text-accent-500"
+    >
+      {currentAmount !== null ? (
+        `Budget: ${fmtMoney(currentAmount)}`
+      ) : (
+        <span className="font-semibold text-accent-500">Set day budget</span>
+      )}
+      <Pencil className={cn("h-3 w-3", currentAmount === null && "text-accent-500")} />
     </button>
   );
 }
@@ -64,21 +73,22 @@ export function DayBudgetBreakdown({ trip, budgetVsActual }: { trip: Trip; budge
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-primary-500" />
+        <CardTitle>
+          <CalendarDays className="h-[19px] w-[19px] text-primary-700" strokeWidth={1.9} />
           By day
         </CardTitle>
       </CardHeader>
-      <div className="flex flex-col gap-4">
-        {trip.itineraryDays.map((day) => {
+      <div>
+        {trip.itineraryDays.map((day, i) => {
           const stats = budgetVsActual.byDay[day.id];
+          const isLast = i === trip.itineraryDays.length - 1;
           return (
-            <div key={day.id} className="rounded-xl border border-ink-100 p-4">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-ink-900">{day.label}</span>
-                <span className="text-xs text-ink-500">${stats.spent.toFixed(2)} spent</span>
+            <div key={day.id} className={cn("py-4", !isLast && "border-b border-hair")}>
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <span className="font-display text-[14.5px] font-semibold text-ink-900">{day.label}</span>
+                <span className="font-mono text-xs text-secondary-ink">{fmtMoney(stats.spent)} spent</span>
               </div>
-              {stats.budget !== null && <ProgressBar value={stats.spent} max={stats.budget} className="mb-2" />}
+              <ProgressBar value={stats.spent} max={stats.budget ?? 0} />
               <DayAllocationEditor dayId={day.id} currentAmount={stats.budget} />
             </div>
           );

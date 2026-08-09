@@ -66,8 +66,8 @@ export function WeatherForecastCard({ trip }: { trip: Trip }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CloudSun className="h-5 w-5 text-primary-500" />
+        <CardTitle>
+          <CloudSun className="h-[19px] w-[19px] text-primary-700" strokeWidth={1.9} />
           Weather at {trip.destination.name || "your destination"}
         </CardTitle>
       </CardHeader>
@@ -101,7 +101,7 @@ export function WeatherForecastCard({ trip }: { trip: Trip }) {
       )}
 
       {hasCoords && loading && (
-        <div className="flex items-center gap-2 text-sm text-ink-400">
+        <div className="flex items-center gap-2 text-sm text-ink-500">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading forecast…
         </div>
       )}
@@ -116,24 +116,24 @@ export function WeatherForecastCard({ trip }: { trip: Trip }) {
 
       {hasCoords && forecast && forecast.length > 0 && (
         <>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="grid grid-cols-2 gap-[9px] sm:grid-cols-5">
             {forecast.map((day) => (
               <div
                 key={day.date}
-                className="flex min-w-[92px] flex-col items-center gap-1 rounded-xl bg-primary-50 px-3 py-3 text-center"
+                className="rounded-md border border-hair bg-surface-2 px-2 py-3 text-center"
               >
-                <span className="text-xs font-medium text-ink-500">
-                  {new Date(day.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}
-                </span>
-                <span className="text-xs text-ink-500">{describeWeatherCode(day.weatherCode)}</span>
-                <span className="font-display text-sm font-semibold text-ink-900">
-                  {Math.round(day.tempMaxC)}° / {Math.round(day.tempMinC)}°
-                </span>
+                <div className="font-mono text-[11px] tracking-[.04em] text-secondary-ink">
+                  {new Date(day.date).toLocaleDateString(undefined, { weekday: "short", day: "numeric" }).toUpperCase()}
+                </div>
+                <div className="my-1.5 min-h-[28px] text-[11px] text-ink-500">{describeWeatherCode(day.weatherCode)}</div>
+                <div className="font-display text-sm font-semibold text-ink-900">
+                  {Math.round(day.tempMaxC)}° <span className="font-normal text-ink-500">/ {Math.round(day.tempMinC)}°</span>
+                </div>
               </div>
             ))}
           </div>
           {forecast[forecast.length - 1].date < trip.returnDate && (
-            <p className="mt-3 text-xs text-ink-400">
+            <p className="mt-3 text-xs text-ink-500">
               Showing what's forecastable so far — the rest of your trip will fill in closer to departure.
             </p>
           )}

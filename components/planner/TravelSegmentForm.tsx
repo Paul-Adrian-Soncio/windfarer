@@ -96,8 +96,8 @@ export function TravelSegmentForm({ onSubmit, onCancel }: TravelSegmentFormProps
       <Toggle checked={isLayover} onChange={setIsLayover} label="This is a layover / connecting leg" />
 
       {mode === "plane" && (
-        <div className="flex flex-col gap-3 rounded-xl bg-primary-50/60 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">Flight details</p>
+        <div className="flex flex-col gap-3 rounded-xl bg-primary-tint/60 p-4">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[.1em] text-primary-700">Flight details</p>
           <Toggle checked={flightInsurance} onChange={setFlightInsurance} label="Flight insurance availed" />
           <Toggle checked={mealsIncluded} onChange={setMealsIncluded} label="Meals included" />
           <Field label="Luggage registered (count, optional)">
