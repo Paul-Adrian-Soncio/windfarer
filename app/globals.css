@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7fafc;
+  --foreground: #1e293b;
+
+  /* Primary — trust/cozy blues, derived from the WindFarer logo */
+  --color-primary-50: #eef6fd;
+  --color-primary-100: #d9ecfa;
+  --color-primary-200: #b3d9f5;
+  --color-primary-300: #7fbfed;
+  --color-primary-400: #4c9fdf;
+  --color-primary-500: #2b7ecb;
+  --color-primary-600: #1d63ac;
+  --color-primary-700: #194f88;
+  --color-primary-800: #163f6a;
+  --color-primary-900: #0f2c4c;
+  --color-primary-950: #0a1d33;
+
+  /* Ink — warm-leaning neutrals, avoids a cold/corporate feel */
+  --color-ink-50: #f9f8f6;
+  --color-ink-100: #f0eee9;
+  --color-ink-200: #e2ded5;
+  --color-ink-300: #c9c2b4;
+  --color-ink-400: #a89d8a;
+  --color-ink-500: #8a7d68;
+  --color-ink-600: #6b5f4e;
+  --color-ink-700: #52493c;
+  --color-ink-800: #3a3327;
+  --color-ink-900: #241f18;
+
+  /* Accent — warm coral pop, used sparingly for "fun" */
+  --color-accent-50: #fff1ee;
+  --color-accent-100: #ffe1d9;
+  --color-accent-200: #ffc3b3;
+  --color-accent-300: #ff9d80;
+  --color-accent-400: #fb7a56;
+  --color-accent-500: #f2593a;
+  --color-accent-600: #d63f22;
+  --color-accent-700: #b0301a;
+  --color-accent-800: #8a2817;
+  --color-accent-900: #6b2115;
+
+  /* Semantic */
+  --color-success-500: #2f9e6c;
+  --color-success-600: #22815a;
+  --color-warning-500: #e8a53d;
+  --color-warning-600: #c98529;
+  --color-danger-500: #e14f4f;
+  --color-danger-600: #c53939;
+
+  --shadow-soft-color: 30 41 59;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-200: var(--color-primary-200);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+  --color-primary-950: var(--color-primary-950);
+
+  --color-ink-50: var(--color-ink-50);
+  --color-ink-100: var(--color-ink-100);
+  --color-ink-200: var(--color-ink-200);
+  --color-ink-300: var(--color-ink-300);
+  --color-ink-400: var(--color-ink-400);
+  --color-ink-500: var(--color-ink-500);
+  --color-ink-600: var(--color-ink-600);
+  --color-ink-700: var(--color-ink-700);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-900: var(--color-ink-900);
+
+  --color-accent-50: var(--color-accent-50);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
+
+  --color-success-500: var(--color-success-500);
+  --color-success-600: var(--color-success-600);
+  --color-warning-500: var(--color-warning-500);
+  --color-warning-600: var(--color-warning-600);
+  --color-danger-500: var(--color-danger-500);
+  --color-danger-600: var(--color-danger-600);
+
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 2px 10px -2px rgb(var(--shadow-soft-color) / 0.08), 0 8px 24px -8px rgb(var(--shadow-soft-color) / 0.10);
+  --shadow-lift: 0 8px 20px -4px rgb(var(--shadow-soft-color) / 0.18), 0 16px 40px -12px rgb(var(--shadow-soft-color) / 0.22);
+
+  --background-image-hero-gradient: linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-500) 55%, var(--color-primary-400) 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0d1520;
+    --foreground: #e7edf5;
+    --shadow-soft-color: 0 0 0;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
