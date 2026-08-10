@@ -8,6 +8,7 @@ interface TicketStubProps {
   title: string;
   route: string;
   cost?: number;
+  currency: string;
   seatOrRef?: string;
   badges?: ReactNode;
   onRemove: () => void;
@@ -19,7 +20,7 @@ interface TicketStubProps {
  * mode icon / title / route / badges, and a perforated stub with fare + a
  * seat/reference line — see §5 of the Trailhead redesign brief.
  */
-export function TicketStub({ icon, title, route, cost, seatOrRef, badges, onRemove, className }: TicketStubProps) {
+export function TicketStub({ icon, title, route, cost, currency, seatOrRef, badges, onRemove, className }: TicketStubProps) {
   return (
     <div className={cn("relative flex overflow-hidden rounded-md border border-hair bg-surface shadow-[0_6px_16px_-12px_rgba(43,39,33,0.4)]", className)}>
       <div className="min-w-0 flex-1 p-4">
@@ -46,7 +47,7 @@ export function TicketStub({ icon, title, route, cost, seatOrRef, badges, onRemo
         </button>
         <span className="font-mono text-[9px] tracking-[.08em] text-ink-500">FARE</span>
         <span className="font-display text-[17px] font-bold text-ink-900">
-          {cost !== undefined ? fmtMoney(cost) : "—"}
+          {cost !== undefined ? fmtMoney(cost, currency) : "—"}
         </span>
         {seatOrRef && <span className="font-mono text-[9px] tracking-[.08em] text-ink-500">{seatOrRef}</span>}
       </div>

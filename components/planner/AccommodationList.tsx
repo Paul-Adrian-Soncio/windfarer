@@ -62,7 +62,7 @@ export function AccommodationList({ trip }: { trip: Trip }) {
               </>
             }
             meta={`${acc.place.name.toUpperCase()} · ${acc.checkIn} → ${acc.checkOut}`}
-            price={acc.cost !== undefined ? fmtMoney(acc.cost) : undefined}
+            price={acc.cost !== undefined ? fmtMoney(acc.cost, trip.budget.currency) : undefined}
             notes={acc.notes}
             onRemove={() => removeAccommodation(acc.id)}
           />

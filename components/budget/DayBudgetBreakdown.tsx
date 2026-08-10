@@ -56,7 +56,7 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
       className="mt-2 flex items-center gap-1.5 text-xs text-ink-500 hover:text-accent-500"
     >
       {currentAmount !== null ? (
-        `Budget: ${fmtMoney(currentAmount)}`
+        `Budget: ${fmtMoney(currentAmount, trip?.budget.currency)}`
       ) : (
         <span className="font-semibold text-accent-500">Set day budget</span>
       )}
@@ -86,7 +86,7 @@ export function DayBudgetBreakdown({ trip, budgetVsActual }: { trip: Trip; budge
             <div key={day.id} className={cn("py-4", !isLast && "border-b border-hair")}>
               <div className="mb-2.5 flex items-center justify-between gap-3">
                 <span className="font-display text-[14.5px] font-semibold text-ink-900">{day.label}</span>
-                <span className="font-mono text-xs text-secondary-ink">{fmtMoney(stats.spent)} spent</span>
+                <span className="font-mono text-xs text-secondary-ink">{fmtMoney(stats.spent, trip.budget.currency)} spent</span>
               </div>
               <ProgressBar value={stats.spent} max={stats.budget ?? 0} />
               <DayAllocationEditor dayId={day.id} currentAmount={stats.budget} />

@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { Compass } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Field, Input } from "@/components/ui/Input";
+import { Field, Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useTripStore } from "@/store/tripStore";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from "@/lib/currency";
 import { Trip } from "@/types";
 
 export function TripBasicsForm({ trip }: { trip: Trip | null }) {
   const createTrip = useTripStore((s) => s.createTrip);
   const updateTripBasics = useTripStore((s) => s.updateTripBasics);
+  const setCurrency = useTripStore((s) => s.setCurrency);
 
   const [destination, setDestination] = useState(trip?.destination.name ?? "");
   const [departureDate, setDepartureDate] = useState(trip?.departureDate ?? "");
@@ -19,6 +21,7 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
   const [arrivalTime, setArrivalTime] = useState(trip?.arrivalTime ?? "");
   const [returnDate, setReturnDate] = useState(trip?.returnDate ?? "");
   const [returnTime, setReturnTime] = useState(trip?.returnTime ?? "");
+  const [currency, setCurrencyDraft] = useState(trip?.budget.currency ?? DEFAULT_CURRENCY);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,6 +37,7 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
         returnDate,
         returnTime: returnTime || undefined,
       });
+      if (currency !== trip.budget.currency) setCurrency(currency);
     } else {
       createTrip({
         destination: { name: destination, lat: null, lng: null },
@@ -43,6 +47,7 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
         arrivalTime: arrivalTime || undefined,
         returnDate,
         returnTime: returnTime || undefined,
+        currency,
       });
     }
   }
@@ -56,14 +61,25 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
         </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Destination">
-          <Input
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder="e.g. Kyoto, Japan"
-            required
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+          <Field label="Destination">
+            <Input
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="e.g. Kyoto, Japan"
+              required
+            />
+          </Field>
+          <Field label="Currency">
+            <Select value={currency} onChange={(e) => setCurrencyDraft(e.target.value)} className="sm:w-[110px]">
+              {CURRENCY_OPTIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} {c.symbol}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Departure date" hint="Leaving home">

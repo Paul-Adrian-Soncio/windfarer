@@ -12,5 +12,6 @@ export interface BudgetAllocation {
 
 export interface TripBudget {
   totalBudget: number | null;
+  currency: string;
   allocations: BudgetAllocation[];
 }

@@ -1,4 +1,6 @@
-export function fmtMoney(n: number, currency = "USD", locale = "en-US"): string {
+import { DEFAULT_CURRENCY } from "./currency";
+
+export function fmtMoney(n: number, currency: string = DEFAULT_CURRENCY, locale = "en-US"): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,

@@ -6,6 +6,8 @@ import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { BlockTypeIcon } from "./BlockTypeIcon";
 import { getBlockTypeOption } from "@/lib/constants";
 import { fmtMoney } from "@/lib/money";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
+import { useTripStore } from "@/store/tripStore";
 import { ItineraryBlock } from "@/types";
 import { cn } from "@/lib/cn";
 
@@ -19,6 +21,7 @@ interface ItineraryBlockCardProps {
 export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: ItineraryBlockCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const { borderClass } = getBlockTypeOption(block.type);
+  const currency = useTripStore((s) => s.trip?.budget.currency) ?? DEFAULT_CURRENCY;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -63,7 +66,7 @@ export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: Itinera
       {(block.scheduledTime || block.plannedExpense !== undefined) && (
         <div className="ml-[34px] mt-2 flex gap-3.5 font-mono text-[11.5px] text-secondary-ink">
           {block.scheduledTime && <span>{block.scheduledTime}</span>}
-          {block.plannedExpense !== undefined && <span>{fmtMoney(block.plannedExpense)}</span>}
+          {block.plannedExpense !== undefined && <span>{fmtMoney(block.plannedExpense, currency)}</span>}
         </div>
       )}
       {block.description && <p className="ml-[34px] mt-[5px] text-xs text-ink-500">{block.description}</p>}

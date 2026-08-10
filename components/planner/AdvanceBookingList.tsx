@@ -74,7 +74,7 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
             key={b.id}
             icon={<Ticket />}
             title={b.title}
-            price={b.cost !== undefined ? fmtMoney(b.cost) : undefined}
+            price={b.cost !== undefined ? fmtMoney(b.cost, trip.budget.currency) : undefined}
             notes={b.notes}
             onRemove={() => removeAdvanceBooking(b.id)}
           />

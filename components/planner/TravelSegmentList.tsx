@@ -58,6 +58,7 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
                 title={`${label}${segment.providerName ? ` · ${segment.providerName}` : ""}`}
                 route={route}
                 cost={segment.cost}
+                currency={trip.budget.currency}
                 onRemove={() => removeTravelSegment(segment.id)}
                 badges={
                   <>

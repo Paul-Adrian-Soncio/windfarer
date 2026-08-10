@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateId } from "@/lib/id";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
 import { createTripPersistStorage } from "./persistConfig";
 import {
   Trip,
@@ -22,6 +23,7 @@ export interface CreateTripInput {
   arrivalTime?: string;
   returnDate: string;
   returnTime?: string;
+  currency?: string;
 }
 
 interface TripState {
@@ -63,6 +65,7 @@ interface TripState {
 
   // Budget
   setTotalBudget: (amount: number | null) => void;
+  setCurrency: (currency: string) => void;
   upsertAllocation: (alloc: Omit<BudgetAllocation, "id"> & { id?: string }) => void;
   removeAllocation: (id: string) => void;
 }
@@ -94,7 +97,7 @@ export const useTripStore = create<TripState>()(
           accommodations: [],
           advanceBookings: [],
           itineraryDays: [],
-          budget: { totalBudget: null, allocations: [] },
+          budget: { totalBudget: null, currency: input.currency ?? DEFAULT_CURRENCY, allocations: [] },
           createdAt: now,
           updatedAt: now,
         };
@@ -294,6 +297,11 @@ export const useTripStore = create<TripState>()(
         if (!trip) return;
         set({ trip: touch({ ...trip, budget: { ...trip.budget, totalBudget: amount } }) });
       },
+      setCurrency: (currency) => {
+        const { trip } = get();
+        if (!trip) return;
+        set({ trip: touch({ ...trip, budget: { ...trip.budget, currency } }) });
+      },
       upsertAllocation: (alloc) => {
         const { trip } = get();
         if (!trip) return;
@@ -319,8 +327,18 @@ export const useTripStore = create<TripState>()(
     }),
     {
       name: "windfarer-trip-store",
+      version: 1,
       storage: createTripPersistStorage(),
       partialize: (state) => ({ trip: state.trip, blocks: state.blocks }),
+      // v0 -> v1: trips persisted before the currency selector was added are
+      // missing budget.currency — backfill it rather than crashing on read.
+      migrate: (persisted) => {
+        const state = persisted as { trip?: Trip | null; blocks?: Record<string, ItineraryBlock> };
+        if (state?.trip && !state.trip.budget.currency) {
+          state.trip = { ...state.trip, budget: { ...state.trip.budget, currency: DEFAULT_CURRENCY } };
+        }
+        return state;
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
