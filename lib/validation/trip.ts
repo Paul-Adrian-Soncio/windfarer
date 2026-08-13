@@ -21,3 +21,13 @@ export const createTripSchema = z.object({
 });
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
+
+// PATCH allows updating any subset of the same fields, plus totalBudget
+// (not part of trip creation in the current frontend flow, but editable
+// afterward from the Budget tab). .partial() makes every field optional
+// while keeping the same validation rules for whichever fields ARE sent.
+export const updateTripSchema = createTripSchema.partial().extend({
+  totalBudget: z.number().nullable().optional(),
+});
+
+export type UpdateTripInput = z.infer<typeof updateTripSchema>;
