@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { generateId } from "@/lib/id";
 import * as tripRepository from "@/lib/repository/tripRepository";
 import * as travelSegmentRepository from "@/lib/repository/travelSegmentRepository";
+import * as accommodationRepository from "@/lib/repository/accommodationRepository";
+import * as advanceBookingRepository from "@/lib/repository/advanceBookingRepository";
 import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
@@ -47,22 +49,20 @@ interface TripState {
   createTrip: (input: CreateTripInput) => Promise<void>;
   updateTripBasics: (patch: Partial<Omit<Trip, "id" | "createdAt" | "updatedAt">>) => Promise<void>;
 
-  // Travel segments — wired to the real API. Everything below
-  // (accommodations, itinerary, budget) is still local-only for now;
-  // that's the next migration step.
+  // Travel segments, accommodations, advance bookings — all wired to the
+  // real API. Everything below (itinerary, budget) is still local-only
+  // for now; that's the next migration step.
   addTravelSegment: (segment: Omit<TravelSegment, "id">) => Promise<void>;
   updateTravelSegment: (id: string, patch: Partial<TravelSegment>) => Promise<void>;
   removeTravelSegment: (id: string) => Promise<void>;
 
-  // Accommodations
-  addAccommodation: (acc: Omit<Accommodation, "id">) => void;
-  updateAccommodation: (id: string, patch: Partial<Accommodation>) => void;
-  removeAccommodation: (id: string) => void;
+  addAccommodation: (acc: Omit<Accommodation, "id">) => Promise<void>;
+  updateAccommodation: (id: string, patch: Partial<Accommodation>) => Promise<void>;
+  removeAccommodation: (id: string) => Promise<void>;
 
-  // Advance bookings
-  addAdvanceBooking: (b: Omit<AdvanceBooking, "id">) => void;
-  updateAdvanceBooking: (id: string, patch: Partial<AdvanceBooking>) => void;
-  removeAdvanceBooking: (id: string) => void;
+  addAdvanceBooking: (b: Omit<AdvanceBooking, "id">) => Promise<void>;
+  updateAdvanceBooking: (id: string, patch: Partial<AdvanceBooking>) => Promise<void>;
+  removeAdvanceBooking: (id: string) => Promise<void>;
 
   // Itinerary days
   addDay: (label?: string) => void;
@@ -120,6 +120,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
           set({ trip, blocks: {}, status: "ready" });
         } catch (err) {
           set({ status: "error", error: errorMessage(err) });
+          throw err;
         }
       },
 
@@ -147,6 +148,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
           }));
         } catch (err) {
           set({ error: errorMessage(err) });
+          throw err;
         }
       },
 
@@ -162,6 +164,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
           );
         } catch (err) {
           set({ error: errorMessage(err) });
+          throw err;
         }
       },
       updateTravelSegment: async (id, patch) => {
@@ -181,6 +184,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
           );
         } catch (err) {
           set({ error: errorMessage(err) });
+          throw err;
         }
       },
       removeTravelSegment: async (id) => {
@@ -195,55 +199,110 @@ export const useTripStore = create<TripState>()((set, get) => ({
           );
         } catch (err) {
           set({ error: errorMessage(err) });
+          throw err;
         }
       },
 
-      addAccommodation: (acc) => {
+      addAccommodation: async (acc) => {
         const { trip } = get();
         if (!trip) return;
-        const newAcc: Accommodation = { ...acc, id: generateId() };
-        set({ trip: touch({ ...trip, accommodations: [...trip.accommodations, newAcc] }) });
+        try {
+          const newAcc = await accommodationRepository.createAccommodation(trip.id, acc);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, accommodations: [...state.trip.accommodations, newAcc] }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      updateAccommodation: (id, patch) => {
+      updateAccommodation: async (id, patch) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            accommodations: trip.accommodations.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-          }),
-        });
+        try {
+          const updated = await accommodationRepository.updateAccommodation(trip.id, id, patch);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    accommodations: state.trip.accommodations.map((a) => (a.id === id ? updated : a)),
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      removeAccommodation: (id) => {
+      removeAccommodation: async (id) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({ ...trip, accommodations: trip.accommodations.filter((a) => a.id !== id) }),
-        });
+        try {
+          await accommodationRepository.deleteAccommodation(trip.id, id);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, accommodations: state.trip.accommodations.filter((a) => a.id !== id) }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
 
-      addAdvanceBooking: (b) => {
+      addAdvanceBooking: async (b) => {
         const { trip } = get();
         if (!trip) return;
-        const newBooking: AdvanceBooking = { ...b, id: generateId() };
-        set({ trip: touch({ ...trip, advanceBookings: [...trip.advanceBookings, newBooking] }) });
+        try {
+          const newBooking = await advanceBookingRepository.createAdvanceBooking(trip.id, b);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, advanceBookings: [...state.trip.advanceBookings, newBooking] }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      updateAdvanceBooking: (id, patch) => {
+      updateAdvanceBooking: async (id, patch) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            advanceBookings: trip.advanceBookings.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-          }),
-        });
+        try {
+          const updated = await advanceBookingRepository.updateAdvanceBooking(trip.id, id, patch);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    advanceBookings: state.trip.advanceBookings.map((b) => (b.id === id ? updated : b)),
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      removeAdvanceBooking: (id) => {
+      removeAdvanceBooking: async (id) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({ ...trip, advanceBookings: trip.advanceBookings.filter((b) => b.id !== id) }),
-        });
+        try {
+          await advanceBookingRepository.deleteAdvanceBooking(trip.id, id);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, advanceBookings: state.trip.advanceBookings.filter((b) => b.id !== id) }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
 
       addDay: (label) => {

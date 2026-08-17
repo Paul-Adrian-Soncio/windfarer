@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Accommodation } from "@/types";
 
 interface AccommodationFormProps {
-  onSubmit: (acc: Omit<Accommodation, "id">) => void;
+  onSubmit: (acc: Omit<Accommodation, "id">) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -21,21 +21,31 @@ export function AccommodationForm({ onSubmit, onCancel }: AccommodationFormProps
   const [willTransferLater, setWillTransferLater] = useState(false);
   const [cost, setCost] = useState("");
   const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !checkIn || !checkOut) return;
-    onSubmit({
-      name,
-      place: { name: location || name, lat: null, lng: null },
-      checkIn,
-      checkInTime: checkInTime || undefined,
-      checkOut,
-      checkOutTime: checkOutTime || undefined,
-      willTransferLater,
-      cost: cost ? Number(cost) : undefined,
-      notes: notes || undefined,
-    });
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onSubmit({
+        name,
+        place: { name: location || name, lat: null, lng: null },
+        checkIn,
+        checkInTime: checkInTime || undefined,
+        checkOut,
+        checkOutTime: checkOutTime || undefined,
+        willTransferLater,
+        cost: cost ? Number(cost) : undefined,
+        notes: notes || undefined,
+      });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -73,9 +83,13 @@ export function AccommodationForm({ onSubmit, onCancel }: AccommodationFormProps
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Confirmation number, host contact, etc." />
       </Field>
 
+      {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
+
       <div className="flex gap-2">
-        <Button type="submit">Add stay</Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Adding…" : "Add stay"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
       </div>

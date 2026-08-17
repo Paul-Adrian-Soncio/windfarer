@@ -17,15 +17,25 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [cost, setCost] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title) return;
-    addAdvanceBooking({ title, notes: notes || undefined, cost: cost ? Number(cost) : undefined });
-    setTitle("");
-    setNotes("");
-    setCost("");
-    setShowForm(false);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await addAdvanceBooking({ title, notes: notes || undefined, cost: cost ? Number(cost) : undefined });
+      setTitle("");
+      setNotes("");
+      setCost("");
+      setShowForm(false);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -55,9 +65,12 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
               <Input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
             </Field>
           </div>
+          {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
           <div className="flex gap-2">
-            <Button type="submit">Add booking</Button>
-            <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding…" : "Add booking"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setShowForm(false)} disabled={isSubmitting}>
               Cancel
             </Button>
           </div>
@@ -76,7 +89,7 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
             title={b.title}
             price={b.cost !== undefined ? fmtMoney(b.cost, trip.budget.currency) : undefined}
             notes={b.notes}
-            onRemove={() => removeAdvanceBooking(b.id)}
+            onRemove={() => removeAdvanceBooking(b.id).catch(() => {})}
           />
         ))}
       </div>

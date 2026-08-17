@@ -9,6 +9,7 @@ import { AccommodationForm } from "./AccommodationForm";
 import { ListRow } from "./ListRow";
 import { useTripStore } from "@/store/tripStore";
 import { fmtMoney } from "@/lib/money";
+import { formatShortDate } from "@/lib/date/format";
 import { Trip } from "@/types";
 
 export function AccommodationList({ trip }: { trip: Trip }) {
@@ -33,8 +34,8 @@ export function AccommodationList({ trip }: { trip: Trip }) {
       {showForm && (
         <div className="mb-4">
           <AccommodationForm
-            onSubmit={(acc) => {
-              addAccommodation(acc);
+            onSubmit={async (acc) => {
+              await addAccommodation(acc);
               setShowForm(false);
             }}
             onCancel={() => setShowForm(false)}
@@ -61,10 +62,10 @@ export function AccommodationList({ trip }: { trip: Trip }) {
                 )}
               </>
             }
-            meta={`${acc.place.name.toUpperCase()} · ${acc.checkIn} → ${acc.checkOut}`}
+            meta={`${acc.place.name.toUpperCase()} · ${formatShortDate(acc.checkIn)} → ${formatShortDate(acc.checkOut)}`}
             price={acc.cost !== undefined ? fmtMoney(acc.cost, trip.budget.currency) : undefined}
             notes={acc.notes}
-            onRemove={() => removeAccommodation(acc.id)}
+            onRemove={() => removeAccommodation(acc.id).catch(() => {})}
           />
         ))}
       </div>

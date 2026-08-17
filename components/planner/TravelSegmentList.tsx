@@ -9,6 +9,7 @@ import { TravelSegmentForm } from "./TravelSegmentForm";
 import { TicketStub } from "./TicketStub";
 import { useTripStore } from "@/store/tripStore";
 import { getTravelModeOption } from "@/lib/constants";
+import { formatShortDate } from "@/lib/date/format";
 import { Trip } from "@/types";
 
 // mealsIncluded is boolean | string (a free-text description is allowed,
@@ -57,7 +58,7 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
         {trip.travelSegments.map((segment, i) => {
           const { label, icon: Icon } = getTravelModeOption(segment.mode);
           const route = `${segment.fromPlace?.name ?? "?"} → ${segment.toPlace?.name ?? "?"}${
-            segment.departureDate ? ` · ${segment.departureDate.toUpperCase()}` : ""
+            segment.departureDate ? ` · ${formatShortDate(segment.departureDate).toUpperCase()}` : ""
           }`;
 
           return (
@@ -69,7 +70,12 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
                 route={route}
                 cost={segment.cost}
                 currency={trip.budget.currency}
-                onRemove={() => removeTravelSegment(segment.id)}
+                onRemove={() => {
+                  // Fire-and-forget: the store already records the failure
+                  // in its shared `error` state; this .catch just prevents
+                  // an unhandled promise rejection in the console.
+                  removeTravelSegment(segment.id).catch(() => {});
+                }}
                 badges={
                   <>
                     {segment.isLayover && <Badge className="bg-amber-tint text-amber">Layover</Badge>}
