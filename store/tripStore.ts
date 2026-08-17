@@ -4,6 +4,8 @@ import * as tripRepository from "@/lib/repository/tripRepository";
 import * as travelSegmentRepository from "@/lib/repository/travelSegmentRepository";
 import * as accommodationRepository from "@/lib/repository/accommodationRepository";
 import * as advanceBookingRepository from "@/lib/repository/advanceBookingRepository";
+import * as itineraryDayRepository from "@/lib/repository/itineraryDayRepository";
+import * as itineraryBlockRepository from "@/lib/repository/itineraryBlockRepository";
 import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
@@ -64,16 +66,18 @@ interface TripState {
   updateAdvanceBooking: (id: string, patch: Partial<AdvanceBooking>) => Promise<void>;
   removeAdvanceBooking: (id: string) => Promise<void>;
 
-  // Itinerary days
-  addDay: (label?: string) => void;
-  renameDay: (dayId: string, label: string) => void;
-  setDayDate: (dayId: string, date: string | undefined) => void;
-  removeDay: (dayId: string) => void;
+  // Itinerary days — wired to the real API.
+  addDay: (label?: string) => Promise<void>;
+  renameDay: (dayId: string, label: string) => Promise<void>;
+  setDayDate: (dayId: string, date: string | undefined) => Promise<void>;
+  removeDay: (dayId: string) => Promise<void>;
 
-  // Itinerary blocks
-  addBlock: (dayId: string, block: Omit<ItineraryBlock, "id" | "dayId">, index?: number) => void;
-  updateBlock: (id: string, patch: Partial<ItineraryBlock>) => void;
-  removeBlock: (id: string) => void;
+  // Itinerary blocks — create/update/delete wired to the real API.
+  // moveBlock (the drag-and-drop reorder) is still local-only — it needs
+  // an optimistic-update-with-rollback design, saved for its own session.
+  addBlock: (dayId: string, block: Omit<ItineraryBlock, "id" | "dayId">, index?: number) => Promise<void>;
+  updateBlock: (id: string, patch: Partial<ItineraryBlock>) => Promise<void>;
+  removeBlock: (id: string) => Promise<void>;
   moveBlock: (blockId: string, toDayId: string, toIndex: number) => void;
 
   // Budget
@@ -305,91 +309,164 @@ export const useTripStore = create<TripState>()((set, get) => ({
         }
       },
 
-      addDay: (label) => {
+      addDay: async (label) => {
         const { trip } = get();
         if (!trip) return;
         const dayNumber = trip.itineraryDays.length + 1;
-        const newDay: ItineraryDay = {
-          id: generateId(),
-          label: label ?? `Day ${dayNumber}`,
-          blockIds: [],
-        };
-        set({ trip: touch({ ...trip, itineraryDays: [...trip.itineraryDays, newDay] }) });
+        try {
+          const newDay = await itineraryDayRepository.createItineraryDay(trip.id, label ?? `Day ${dayNumber}`);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, itineraryDays: [...state.trip.itineraryDays, newDay] }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      renameDay: (dayId, label) => {
+      renameDay: async (dayId, label) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            itineraryDays: trip.itineraryDays.map((d) => (d.id === dayId ? { ...d, label } : d)),
-          }),
-        });
+        const existingDay = trip.itineraryDays.find((d) => d.id === dayId);
+        if (!existingDay) return;
+        try {
+          const updated = await itineraryDayRepository.updateItineraryDay(
+            trip.id,
+            dayId,
+            { label },
+            existingDay.blockIds
+          );
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    itineraryDays: state.trip.itineraryDays.map((d) => (d.id === dayId ? updated : d)),
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      setDayDate: (dayId, date) => {
+      setDayDate: async (dayId, date) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            itineraryDays: trip.itineraryDays.map((d) => (d.id === dayId ? { ...d, date } : d)),
-          }),
-        });
+        const existingDay = trip.itineraryDays.find((d) => d.id === dayId);
+        if (!existingDay) return;
+        try {
+          const updated = await itineraryDayRepository.updateItineraryDay(
+            trip.id,
+            dayId,
+            { date },
+            existingDay.blockIds
+          );
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    itineraryDays: state.trip.itineraryDays.map((d) => (d.id === dayId ? updated : d)),
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      removeDay: (dayId) => {
+      removeDay: async (dayId) => {
         const { trip, blocks } = get();
         if (!trip) return;
         const day = trip.itineraryDays.find((d) => d.id === dayId);
-        const remainingBlocks = { ...blocks };
-        day?.blockIds.forEach((blockId) => delete remainingBlocks[blockId]);
-        set({
-          trip: touch({ ...trip, itineraryDays: trip.itineraryDays.filter((d) => d.id !== dayId) }),
-          blocks: remainingBlocks,
-        });
+        try {
+          await itineraryDayRepository.deleteItineraryDay(trip.id, dayId);
+          const remainingBlocks = { ...blocks };
+          day?.blockIds.forEach((blockId) => delete remainingBlocks[blockId]);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({ ...state.trip, itineraryDays: state.trip.itineraryDays.filter((d) => d.id !== dayId) }),
+                  blocks: remainingBlocks,
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
 
-      addBlock: (dayId, block, index) => {
+      addBlock: async (dayId, block, index) => {
         const { trip, blocks } = get();
         if (!trip) return;
         const day = trip.itineraryDays.find((d) => d.id === dayId);
         if (!day) return;
-        const id = generateId();
-        const newBlock: ItineraryBlock = { ...block, id, dayId };
-        const blockIds = [...day.blockIds];
-        const insertAt = index === undefined ? blockIds.length : index;
-        blockIds.splice(insertAt, 0, id);
-        set({
-          trip: touch({
-            ...trip,
-            itineraryDays: trip.itineraryDays.map((d) => (d.id === dayId ? { ...d, blockIds } : d)),
-          }),
-          blocks: { ...blocks, [id]: newBlock },
-        });
+        try {
+          const newBlock = await itineraryBlockRepository.createItineraryBlock(trip.id, dayId, block);
+          const blockIds = [...day.blockIds];
+          const insertAt = index === undefined ? blockIds.length : index;
+          blockIds.splice(insertAt, 0, newBlock.id);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    itineraryDays: state.trip.itineraryDays.map((d) => (d.id === dayId ? { ...d, blockIds } : d)),
+                  }),
+                  blocks: { ...state.blocks, [newBlock.id]: newBlock },
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      updateBlock: (id, patch) => {
+      updateBlock: async (id, patch) => {
         const { trip, blocks } = get();
         if (!trip || !blocks[id]) return;
-        set({
-          trip: touch(trip),
-          blocks: { ...blocks, [id]: { ...blocks[id], ...patch } },
-        });
+        const dayId = blocks[id].dayId;
+        try {
+          const updated = await itineraryBlockRepository.updateItineraryBlock(trip.id, dayId, id, patch);
+          set((state) => ({
+            trip: state.trip ? touch(state.trip) : state.trip,
+            blocks: { ...state.blocks, [id]: updated },
+          }));
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      removeBlock: (id) => {
+      removeBlock: async (id) => {
         const { trip, blocks } = get();
         if (!trip) return;
         const block = blocks[id];
         if (!block) return;
-        const remainingBlocks = { ...blocks };
-        delete remainingBlocks[id];
-        set({
-          trip: touch({
-            ...trip,
-            itineraryDays: trip.itineraryDays.map((d) =>
-              d.id === block.dayId ? { ...d, blockIds: d.blockIds.filter((bId) => bId !== id) } : d
-            ),
-          }),
-          blocks: remainingBlocks,
-        });
+        try {
+          await itineraryBlockRepository.deleteItineraryBlock(trip.id, block.dayId, id);
+          set((state) => {
+            if (!state.trip) return state;
+            const remainingBlocks = { ...state.blocks };
+            delete remainingBlocks[id];
+            return {
+              trip: touch({
+                ...state.trip,
+                itineraryDays: state.trip.itineraryDays.map((d) =>
+                  d.id === block.dayId ? { ...d, blockIds: d.blockIds.filter((bId) => bId !== id) } : d
+                ),
+              }),
+              blocks: remainingBlocks,
+            };
+          });
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
       moveBlock: (blockId, toDayId, toIndex) => {
         const { trip, blocks } = get();

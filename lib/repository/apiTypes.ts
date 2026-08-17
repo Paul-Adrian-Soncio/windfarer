@@ -89,12 +89,20 @@ export interface ApiItineraryBlock {
   sortOrder: number;
 }
 
+// The bare ItineraryDay row — what GET (list)/POST/PATCH /api/trips/[tripId]/days
+// return. No `blocks` field; a day's blocks are a separate relation, only
+// included when explicitly requested (see ApiItineraryDayWithBlocks below).
 export interface ApiItineraryDay {
   id: string;
   tripId: string;
   label: string;
   date: string | null;
   sortOrder: number;
+}
+
+// The shape used inside GET /api/trips/[tripId]/full's response, where
+// each day's blocks ARE nested (see that route's Prisma `include`).
+export interface ApiItineraryDayWithBlocks extends ApiItineraryDay {
   blocks: ApiItineraryBlock[];
 }
 
@@ -115,5 +123,5 @@ export interface ApiFullTrip extends ApiTrip {
   accommodations: ApiAccommodation[];
   advanceBookings: ApiAdvanceBooking[];
   budgetAllocations: ApiBudgetAllocation[];
-  itineraryDays: ApiItineraryDay[];
+  itineraryDays: ApiItineraryDayWithBlocks[];
 }

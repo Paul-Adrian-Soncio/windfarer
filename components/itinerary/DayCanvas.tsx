@@ -33,7 +33,7 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
   const dayBlocks = day.blockIds.map((id) => blocks[id]).filter(Boolean);
 
   function commitLabel() {
-    if (labelDraft.trim()) renameDay(day.id, labelDraft.trim());
+    if (labelDraft.trim()) renameDay(day.id, labelDraft.trim()).catch(() => {});
     setEditingLabel(false);
   }
 
@@ -68,7 +68,7 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
                 <Pencil className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={() => removeDay(day.id)}
+                onClick={() => removeDay(day.id).catch(() => {})}
                 className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-danger-600"
                 aria-label="Remove day"
               >
@@ -91,7 +91,7 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
               key={block.id}
               block={block}
               onEdit={() => setEditingBlockId(block.id)}
-              onRemove={() => removeBlock(block.id)}
+              onRemove={() => removeBlock(block.id).catch(() => {})}
             />
           ))}
         </SortableContext>

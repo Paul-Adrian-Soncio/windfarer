@@ -10,7 +10,7 @@ import { BlockType, ItineraryBlock } from "@/types";
 interface BlockEditorModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (block: Omit<ItineraryBlock, "id" | "dayId">) => void;
+  onSubmit: (block: Omit<ItineraryBlock, "id" | "dayId">) => Promise<void>;
   initial?: ItineraryBlock;
 }
 
@@ -26,21 +26,31 @@ export function BlockEditorModal({ open, onClose, onSubmit, initial }: BlockEdit
   const [locationName, setLocationName] = useState(initial?.location?.name ?? "");
   const [mealType, setMealType] = useState(initial?.mealType ?? "breakfast");
   const [travelMode, setTravelMode] = useState(initial?.travelMode ?? "walk");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title) return;
-    onSubmit({
-      type,
-      title,
-      description: description || undefined,
-      scheduledTime: scheduledTime || undefined,
-      plannedExpense: plannedExpense ? Number(plannedExpense) : undefined,
-      location: locationName ? { name: locationName, lat: null, lng: null } : undefined,
-      mealType: type === "meal" ? mealType : undefined,
-      travelMode: type === "travel" ? travelMode : undefined,
-    });
-    onClose();
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onSubmit({
+        type,
+        title,
+        description: description || undefined,
+        scheduledTime: scheduledTime || undefined,
+        plannedExpense: plannedExpense ? Number(plannedExpense) : undefined,
+        location: locationName ? { name: locationName, lat: null, lng: null } : undefined,
+        mealType: type === "meal" ? mealType : undefined,
+        travelMode: type === "travel" ? travelMode : undefined,
+      });
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -113,9 +123,13 @@ export function BlockEditorModal({ open, onClose, onSubmit, initial }: BlockEdit
           </Field>
         )}
 
+        {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
+
         <div className="flex gap-2 pt-2">
-          <Button type="submit">{initial ? "Save changes" : "Add block"}</Button>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : initial ? "Save changes" : "Add block"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
         </div>

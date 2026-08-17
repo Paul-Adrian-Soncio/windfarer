@@ -5,6 +5,7 @@ import {
   ApiFullTrip,
   ApiItineraryBlock,
   ApiItineraryDay,
+  ApiItineraryDayWithBlocks,
   ApiTrip,
   ApiTravelSegment,
 } from "./apiTypes";
@@ -132,7 +133,22 @@ export interface TranslatedTrip {
   blocks: Record<string, ItineraryBlock>;
 }
 
-function translateItineraryDay(api: ApiItineraryDay): {
+// A bare day row, no blocks known — used right after creating a day (a
+// brand new day has none yet) and for PATCH responses (a day's own fields
+// changed, its block list didn't).
+export function translateItineraryDay(api: ApiItineraryDay, blockIds: string[] = []): ItineraryDay {
+  return {
+    id: api.id,
+    label: api.label,
+    date: api.date ?? undefined,
+    blockIds,
+  };
+}
+
+// A day WITH its blocks nested (the /full endpoint's shape) — splits into
+// the day (holding only blockIds) plus a flat map of the block objects
+// themselves, matching the store's normalized shape (see TranslatedTrip).
+function translateItineraryDayWithBlocks(api: ApiItineraryDayWithBlocks): {
   day: ItineraryDay;
   blocks: Record<string, ItineraryBlock>;
 } {
@@ -145,15 +161,7 @@ function translateItineraryDay(api: ApiItineraryDay): {
     blockIds.push(block.id);
   }
 
-  return {
-    day: {
-      id: api.id,
-      label: api.label,
-      date: api.date ?? undefined,
-      blockIds,
-    },
-    blocks,
-  };
+  return { day: translateItineraryDay(api, blockIds), blocks };
 }
 
 /** Trip's own fields, before any relations (segments, allocations, etc.) are attached. */
@@ -212,7 +220,7 @@ export function translateFullTrip(api: ApiFullTrip): TranslatedTrip {
   const itineraryDays: ItineraryDay[] = [];
 
   for (const apiDay of api.itineraryDays) {
-    const { day, blocks } = translateItineraryDay(apiDay);
+    const { day, blocks } = translateItineraryDayWithBlocks(apiDay);
     itineraryDays.push(day);
     Object.assign(allBlocks, blocks);
   }

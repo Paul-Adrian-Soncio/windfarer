@@ -24,7 +24,7 @@ export default function ItineraryPage() {
                 Build out each day once you've landed — drag blocks to rearrange.
               </p>
             </div>
-            <Button variant="accent" onClick={() => addDay()}>
+            <Button variant="accent" onClick={() => addDay().catch(() => {})}>
               <Plus className="h-4 w-4" strokeWidth={2.4} /> Add day
             </Button>
           </div>
@@ -35,7 +35,7 @@ export default function ItineraryPage() {
               title="No days yet"
               description="Add your first day to start dropping in activities, meals, and rest stops."
               action={
-                <Button variant="accent" onClick={() => addDay()}>
+                <Button variant="accent" onClick={() => addDay().catch(() => {})}>
                   <Plus className="h-4 w-4" /> Add day
                 </Button>
               }
