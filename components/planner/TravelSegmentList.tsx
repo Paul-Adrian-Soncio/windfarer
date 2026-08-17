@@ -11,6 +11,16 @@ import { useTripStore } from "@/store/tripStore";
 import { getTravelModeOption } from "@/lib/constants";
 import { Trip } from "@/types";
 
+// mealsIncluded is boolean | string (a free-text description is allowed,
+// e.g. "Snacks only") — but after a round-trip through the API, a `false`
+// value can come back as the literal string "false", which a bare truthy
+// check would wrongly treat as "meals included." Treat both false and the
+// string "false" as not-included.
+function isMealsIncluded(value: boolean | string | undefined): boolean {
+  if (!value) return false;
+  return value !== "false";
+}
+
 export function TravelSegmentList({ trip }: { trip: Trip }) {
   const addTravelSegment = useTripStore((s) => s.addTravelSegment);
   const removeTravelSegment = useTripStore((s) => s.removeTravelSegment);
@@ -68,7 +78,7 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
                         <ShieldCheck className="h-3 w-3" /> Insured
                       </Badge>
                     )}
-                    {segment.plane?.mealsIncluded && (
+                    {isMealsIncluded(segment.plane?.mealsIncluded) && (
                       <Badge className="bg-secondary-tint text-secondary-ink">
                         <UtensilsCrossed className="h-3 w-3" /> Meals
                       </Badge>

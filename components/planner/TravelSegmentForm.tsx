@@ -41,8 +41,14 @@ export function TravelSegmentForm({ onSubmit, onCancel }: TravelSegmentFormProps
       arrivalTime: arrivalTime || undefined,
       isLayover,
       cost: cost ? Number(cost) : undefined,
+      // Only attach plane details when the user actually set one of them —
+      // sending {flightInsurance: false, mealsIncluded: false} for every
+      // plane-mode segment (even when nothing was toggled) makes "no plane
+      // info given" indistinguishable from "explicitly declined," and
+      // previously caused a stale-looking "Meals" badge to render even
+      // when nothing was selected.
       plane:
-        mode === "plane"
+        mode === "plane" && (flightInsurance || mealsIncluded || luggageCount)
           ? {
               flightInsurance,
               mealsIncluded,

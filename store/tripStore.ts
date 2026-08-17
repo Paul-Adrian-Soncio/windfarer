@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { generateId } from "@/lib/id";
 import * as tripRepository from "@/lib/repository/tripRepository";
+import * as travelSegmentRepository from "@/lib/repository/travelSegmentRepository";
 import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
@@ -42,16 +43,16 @@ interface TripState {
   // mount — see components/layout/TripGate.tsx.
   loadTrip: () => Promise<void>;
 
-  // Trip lifecycle — these are the only actions wired to the real API so
-  // far. Everything below (segments, accommodations, itinerary, budget)
-  // is still local-only for now; that's the next migration step.
+  // Trip lifecycle — wired to the real API.
   createTrip: (input: CreateTripInput) => Promise<void>;
   updateTripBasics: (patch: Partial<Omit<Trip, "id" | "createdAt" | "updatedAt">>) => Promise<void>;
 
-  // Travel segments
-  addTravelSegment: (segment: Omit<TravelSegment, "id">) => void;
-  updateTravelSegment: (id: string, patch: Partial<TravelSegment>) => void;
-  removeTravelSegment: (id: string) => void;
+  // Travel segments — wired to the real API. Everything below
+  // (accommodations, itinerary, budget) is still local-only for now;
+  // that's the next migration step.
+  addTravelSegment: (segment: Omit<TravelSegment, "id">) => Promise<void>;
+  updateTravelSegment: (id: string, patch: Partial<TravelSegment>) => Promise<void>;
+  removeTravelSegment: (id: string) => Promise<void>;
 
   // Accommodations
   addAccommodation: (acc: Omit<Accommodation, "id">) => void;
@@ -149,30 +150,52 @@ export const useTripStore = create<TripState>()((set, get) => ({
         }
       },
 
-      addTravelSegment: (segment) => {
+      addTravelSegment: async (segment) => {
         const { trip } = get();
         if (!trip) return;
-        const newSegment: TravelSegment = { ...segment, id: generateId() };
-        set({
-          trip: touch({ ...trip, travelSegments: [...trip.travelSegments, newSegment] }),
-        });
+        try {
+          const newSegment = await travelSegmentRepository.createTravelSegment(trip.id, segment);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, travelSegments: [...state.trip.travelSegments, newSegment] }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+        }
       },
-      updateTravelSegment: (id, patch) => {
+      updateTravelSegment: async (id, patch) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            travelSegments: trip.travelSegments.map((s) => (s.id === id ? { ...s, ...patch } : s)),
-          }),
-        });
+        try {
+          const updated = await travelSegmentRepository.updateTravelSegment(trip.id, id, patch);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    travelSegments: state.trip.travelSegments.map((s) => (s.id === id ? updated : s)),
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+        }
       },
-      removeTravelSegment: (id) => {
+      removeTravelSegment: async (id) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({ ...trip, travelSegments: trip.travelSegments.filter((s) => s.id !== id) }),
-        });
+        try {
+          await travelSegmentRepository.deleteTravelSegment(trip.id, id);
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, travelSegments: state.trip.travelSegments.filter((s) => s.id !== id) }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+        }
       },
 
       addAccommodation: (acc) => {

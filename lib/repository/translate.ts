@@ -52,7 +52,7 @@ export function translateTravelSegment(api: ApiTravelSegment): TravelSegment {
     plane: hasPlaneDetails
       ? {
           flightInsurance: api.flightInsurance ?? false,
-          mealsIncluded: api.mealsIncluded ?? false,
+          mealsIncluded: api.mealsIncluded === "true" ? true : (api.mealsIncluded ?? false),
           luggage:
             api.luggageCount !== null
               ? { count: api.luggageCount, weightKg: api.luggageWeightKg ?? undefined }
