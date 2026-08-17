@@ -22,33 +22,47 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
   const [returnDate, setReturnDate] = useState(trip?.returnDate ?? "");
   const [returnTime, setReturnTime] = useState(trip?.returnTime ?? "");
   const [currency, setCurrencyDraft] = useState(trip?.budget.currency ?? DEFAULT_CURRENCY);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!destination || !departureDate || !arrivalDate || !returnDate) return;
 
-    if (trip) {
-      updateTripBasics({
-        destination: { name: destination, lat: trip.destination.lat, lng: trip.destination.lng },
-        departureDate,
-        departureTime: departureTime || undefined,
-        arrivalDate,
-        arrivalTime: arrivalTime || undefined,
-        returnDate,
-        returnTime: returnTime || undefined,
-      });
-      if (currency !== trip.budget.currency) setCurrency(currency);
-    } else {
-      createTrip({
-        destination: { name: destination, lat: null, lng: null },
-        departureDate,
-        departureTime: departureTime || undefined,
-        arrivalDate,
-        arrivalTime: arrivalTime || undefined,
-        returnDate,
-        returnTime: returnTime || undefined,
-        currency,
-      });
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      if (trip) {
+        await updateTripBasics({
+          destination: { name: destination, lat: trip.destination.lat, lng: trip.destination.lng },
+          departureDate,
+          departureTime: departureTime || undefined,
+          arrivalDate,
+          arrivalTime: arrivalTime || undefined,
+          returnDate,
+          returnTime: returnTime || undefined,
+        });
+        // NOTE: currency changes on an existing trip aren't wired to the API
+        // yet — setCurrency is still local-only, part of the budget-related
+        // actions this migration hasn't reached. Real for new trips (below),
+        // a known gap for edits to an existing one.
+        if (currency !== trip.budget.currency) setCurrency(currency);
+      } else {
+        await createTrip({
+          destination: { name: destination, lat: null, lng: null },
+          departureDate,
+          departureTime: departureTime || undefined,
+          arrivalDate,
+          arrivalTime: arrivalTime || undefined,
+          returnDate,
+          returnTime: returnTime || undefined,
+          currency,
+        });
+      }
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -104,9 +118,11 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
           </Field>
         </div>
 
+        {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
+
         <div>
-          <Button type="submit" variant="accent">
-            {trip ? "Save changes" : "Start this trip"}
+          <Button type="submit" variant="accent" disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : trip ? "Save changes" : "Start this trip"}
           </Button>
         </div>
       </form>

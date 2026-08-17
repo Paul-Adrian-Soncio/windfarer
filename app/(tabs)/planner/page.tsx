@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTripStore } from "@/store/tripStore";
 import { TripBasicsForm } from "@/components/planner/TripBasicsForm";
 import { TravelSegmentList } from "@/components/planner/TravelSegmentList";
@@ -8,9 +9,20 @@ import { AdvanceBookingList } from "@/components/planner/AdvanceBookingList";
 
 export default function PlannerPage() {
   const trip = useTripStore((s) => s.trip);
-  const hasHydrated = useTripStore((s) => s.hasHydrated);
+  const status = useTripStore((s) => s.status);
+  const loadTrip = useTripStore((s) => s.loadTrip);
 
-  if (!hasHydrated) {
+  // Same initial-load trigger as TripGate — this page intentionally isn't
+  // wrapped in TripGate, since it needs to render (the "create a trip"
+  // form) even when there's no trip yet.
+  useEffect(() => {
+    if (status === "idle") {
+      loadTrip();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  if (status === "idle" || status === "loading") {
     return <div className="py-24 text-center text-sm text-ink-500">Loading your trip…</div>;
   }
 

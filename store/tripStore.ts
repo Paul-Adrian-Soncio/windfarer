@@ -1,8 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { generateId } from "@/lib/id";
-import { DEFAULT_CURRENCY } from "@/lib/currency";
-import { createTripPersistStorage } from "./persistConfig";
+import * as tripRepository from "@/lib/repository/tripRepository";
+import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
   Place,
@@ -26,15 +25,28 @@ export interface CreateTripInput {
   currency?: string;
 }
 
+export type TripLoadStatus = "idle" | "loading" | "ready" | "error";
+
 interface TripState {
   trip: Trip | null;
   blocks: Record<string, ItineraryBlock>;
-  hasHydrated: boolean;
-  setHasHydrated: (value: boolean) => void;
 
-  // Trip lifecycle
-  createTrip: (input: CreateTripInput) => void;
-  updateTripBasics: (patch: Partial<Omit<Trip, "id" | "createdAt" | "updatedAt">>) => void;
+  // Replaces the old persist-middleware hasHydrated: "idle" before the
+  // initial load has been kicked off, "loading" while it's in flight,
+  // "ready" once we know the real state (whether or not a trip exists),
+  // "error" if the initial load itself failed.
+  status: TripLoadStatus;
+  error: string | null;
+
+  // Fetches the user's trip (if any) from the API. Call once on app
+  // mount — see components/layout/TripGate.tsx.
+  loadTrip: () => Promise<void>;
+
+  // Trip lifecycle — these are the only actions wired to the real API so
+  // far. Everything below (segments, accommodations, itinerary, budget)
+  // is still local-only for now; that's the next migration step.
+  createTrip: (input: CreateTripInput) => Promise<void>;
+  updateTripBasics: (patch: Partial<Omit<Trip, "id" | "createdAt" | "updatedAt">>) => Promise<void>;
 
   // Travel segments
   addTravelSegment: (segment: Omit<TravelSegment, "id">) => void;
@@ -74,40 +86,67 @@ function touch(trip: Trip): Trip {
   return { ...trip, updatedAt: new Date().toISOString() };
 }
 
-export const useTripStore = create<TripState>()(
-  persist(
-    (set, get) => ({
+function errorMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.message;
+  if (err instanceof Error) return err.message;
+  return "Something went wrong.";
+}
+
+export const useTripStore = create<TripState>()((set, get) => ({
       trip: null,
       blocks: {},
-      hasHydrated: false,
-      setHasHydrated: (value) => set({ hasHydrated: value }),
+      status: "idle",
+      error: null,
 
-      createTrip: (input) => {
-        const now = new Date().toISOString();
-        const trip: Trip = {
-          id: generateId(),
-          destination: input.destination,
-          departureDate: input.departureDate,
-          departureTime: input.departureTime,
-          arrivalDate: input.arrivalDate,
-          arrivalTime: input.arrivalTime,
-          returnDate: input.returnDate,
-          returnTime: input.returnTime,
-          travelSegments: [],
-          accommodations: [],
-          advanceBookings: [],
-          itineraryDays: [],
-          budget: { totalBudget: null, currency: input.currency ?? DEFAULT_CURRENCY, allocations: [] },
-          createdAt: now,
-          updatedAt: now,
-        };
-        set({ trip, blocks: {} });
+      loadTrip: async () => {
+        set({ status: "loading", error: null });
+        try {
+          const result = await tripRepository.findExistingTrip();
+          if (!result) {
+            set({ trip: null, blocks: {}, status: "ready" });
+            return;
+          }
+          set({ trip: result.trip, blocks: result.blocks, status: "ready" });
+        } catch (err) {
+          set({ status: "error", error: errorMessage(err) });
+        }
       },
 
-      updateTripBasics: (patch) => {
-        const { trip } = get();
-        if (!trip) return;
-        set({ trip: touch({ ...trip, ...patch }) });
+      createTrip: async (input) => {
+        set({ status: "loading", error: null });
+        try {
+          const trip = await tripRepository.createTrip(input);
+          set({ trip, blocks: {}, status: "ready" });
+        } catch (err) {
+          set({ status: "error", error: errorMessage(err) });
+        }
+      },
+
+      updateTripBasics: async (patch) => {
+        const { trip: previousTrip } = get();
+        if (!previousTrip) return;
+
+        try {
+          const updated = await tripRepository.updateTripBasics(previousTrip.id, {
+            destinationName: patch.destination?.name,
+            destinationLat: patch.destination?.lat,
+            destinationLng: patch.destination?.lng,
+            departureDate: patch.departureDate,
+            departureTime: patch.departureTime,
+            arrivalDate: patch.arrivalDate,
+            arrivalTime: patch.arrivalTime,
+            returnDate: patch.returnDate,
+            returnTime: patch.returnTime,
+          });
+          // The API only knows about the Trip row's own fields — merge the
+          // response into the existing trip rather than replacing it, so
+          // segments/days/etc. (not part of this response) aren't dropped.
+          set((state) => ({
+            trip: state.trip ? { ...state.trip, ...updated } : state.trip,
+          }));
+        } catch (err) {
+          set({ error: errorMessage(err) });
+        }
       },
 
       addTravelSegment: (segment) => {
@@ -324,26 +363,6 @@ export const useTripStore = create<TripState>()(
           }),
         });
       },
-    }),
-    {
-      name: "windfarer-trip-store",
-      version: 1,
-      storage: createTripPersistStorage(),
-      partialize: (state) => ({ trip: state.trip, blocks: state.blocks }),
-      // v0 -> v1: trips persisted before the currency selector was added are
-      // missing budget.currency — backfill it rather than crashing on read.
-      migrate: (persisted) => {
-        const state = persisted as { trip?: Trip | null; blocks?: Record<string, ItineraryBlock> };
-        if (state?.trip && !state.trip.budget.currency) {
-          state.trip = { ...state.trip, budget: { ...state.trip.budget, currency: DEFAULT_CURRENCY } };
-        }
-        return state;
-      },
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-    }
-  )
-);
+}));
 
 export type { BlockType };

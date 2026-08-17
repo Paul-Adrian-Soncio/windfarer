@@ -1,0 +1,234 @@
+import {
+  ApiAccommodation,
+  ApiAdvanceBooking,
+  ApiBudgetAllocation,
+  ApiFullTrip,
+  ApiItineraryBlock,
+  ApiItineraryDay,
+  ApiTrip,
+  ApiTravelSegment,
+} from "./apiTypes";
+import { decimalToNumber } from "./decimal";
+import {
+  Accommodation,
+  AdvanceBooking,
+  BudgetAllocation,
+  ItineraryBlock,
+  ItineraryDay,
+  LocalTravelMode,
+  Trip,
+  TravelSegment,
+} from "@/types";
+
+/** "PLANE" -> "plane". The API's enums are uppercase; the frontend's are lowercase. */
+function toLowerEnum<T extends string>(value: string): T {
+  return value.toLowerCase() as T;
+}
+
+function translatePlace(name: string | null, lat: number | null, lng: number | null) {
+  if (!name) return undefined;
+  return { name, lat, lng };
+}
+
+export function translateTravelSegment(api: ApiTravelSegment): TravelSegment {
+  const hasPlaneDetails =
+    api.flightInsurance !== null ||
+    api.mealsIncluded !== null ||
+    api.luggageCount !== null ||
+    api.luggageWeightKg !== null;
+
+  return {
+    id: api.id,
+    mode: toLowerEnum(api.mode),
+    providerName: api.providerName ?? undefined,
+    fromPlace: translatePlace(api.fromPlaceName, api.fromPlaceLat, api.fromPlaceLng),
+    toPlace: translatePlace(api.toPlaceName, api.toPlaceLat, api.toPlaceLng),
+    departureDate: api.departureDate ?? undefined,
+    departureTime: api.departureTime ?? undefined,
+    arrivalDate: api.arrivalDate ?? undefined,
+    arrivalTime: api.arrivalTime ?? undefined,
+    isLayover: api.isLayover,
+    cost: decimalToNumber(api.cost),
+    plane: hasPlaneDetails
+      ? {
+          flightInsurance: api.flightInsurance ?? false,
+          mealsIncluded: api.mealsIncluded ?? false,
+          luggage:
+            api.luggageCount !== null
+              ? { count: api.luggageCount, weightKg: api.luggageWeightKg ?? undefined }
+              : undefined,
+        }
+      : undefined,
+  };
+}
+
+export function translateAccommodation(api: ApiAccommodation): Accommodation {
+  return {
+    id: api.id,
+    place: { name: api.placeName, lat: api.placeLat, lng: api.placeLng },
+    name: api.name,
+    checkIn: api.checkIn,
+    checkInTime: api.checkInTime ?? undefined,
+    checkOut: api.checkOut,
+    checkOutTime: api.checkOutTime ?? undefined,
+    willTransferLater: api.willTransferLater,
+    cost: decimalToNumber(api.cost),
+    notes: api.notes ?? undefined,
+  };
+}
+
+export function translateAdvanceBooking(api: ApiAdvanceBooking): AdvanceBooking {
+  return {
+    id: api.id,
+    title: api.title,
+    notes: api.notes ?? undefined,
+    cost: decimalToNumber(api.cost),
+  };
+}
+
+export function translateItineraryBlock(api: ApiItineraryBlock): ItineraryBlock {
+  return {
+    id: api.id,
+    dayId: api.dayId,
+    type: toLowerEnum(api.type),
+    title: api.title,
+    description: api.description ?? undefined,
+    scheduledTime: api.scheduledTime ?? undefined,
+    plannedExpense: decimalToNumber(api.plannedExpense),
+    location: translatePlace(api.locationName, api.locationLat, api.locationLng),
+    mealType: api.mealType
+      ? toLowerEnum<"breakfast" | "lunch" | "dinner" | "snack">(api.mealType)
+      : undefined,
+    travelMode: api.travelMode ? toLowerEnum<LocalTravelMode>(api.travelMode) : undefined,
+  };
+}
+
+export function translateBudgetAllocation(api: ApiBudgetAllocation): BudgetAllocation {
+  const scope =
+    api.scopeKind === "DAY"
+      ? ({ kind: "day", dayId: api.dayId! } as const)
+      : api.scopeKind === "BLOCK"
+        ? ({ kind: "block", blockId: api.blockId! } as const)
+        : ({ kind: "trip" } as const);
+
+  return {
+    id: api.id,
+    label: api.label,
+    scope,
+    amount: Number(api.amount),
+  };
+}
+
+/**
+ * Result of translating a full trip: the frontend's nested Trip shape,
+ * plus the flat blocks map the store keeps separately (see
+ * store/tripStore.ts) — this is the one place that flattening happens,
+ * matching the decision from the previous session that the API stays
+ * shaped around Prisma's natural nesting, not the store's internal
+ * optimization.
+ */
+export interface TranslatedTrip {
+  trip: Trip;
+  blocks: Record<string, ItineraryBlock>;
+}
+
+function translateItineraryDay(api: ApiItineraryDay): {
+  day: ItineraryDay;
+  blocks: Record<string, ItineraryBlock>;
+} {
+  const blocks: Record<string, ItineraryBlock> = {};
+  const blockIds: string[] = [];
+
+  for (const apiBlock of api.blocks) {
+    const block = translateItineraryBlock(apiBlock);
+    blocks[block.id] = block;
+    blockIds.push(block.id);
+  }
+
+  return {
+    day: {
+      id: api.id,
+      label: api.label,
+      date: api.date ?? undefined,
+      blockIds,
+    },
+    blocks,
+  };
+}
+
+/** Trip's own fields, before any relations (segments, allocations, etc.) are attached. */
+type TripBasics = Pick<
+  Trip,
+  "id" | "destination" | "departureDate" | "departureTime" | "arrivalDate" | "arrivalTime" | "returnDate" | "returnTime" | "createdAt" | "updatedAt"
+> & {
+  budget: Omit<Trip["budget"], "allocations">;
+};
+
+/**
+ * Translates just the Trip row's own fields (destination, dates, budget
+ * settings) — everything a bare ApiTrip carries, with no relations
+ * assumed. Used both by translateFullTrip below and directly for
+ * responses that don't include nested data, like POST/PATCH /api/trips
+ * and GET /api/trips (the list endpoint).
+ */
+export function translateTripBasics(api: ApiTrip): TripBasics {
+  return {
+    id: api.id,
+    destination: { name: api.destinationName, lat: api.destinationLat, lng: api.destinationLng },
+    departureDate: api.departureDate,
+    departureTime: api.departureTime ?? undefined,
+    arrivalDate: api.arrivalDate,
+    arrivalTime: api.arrivalTime ?? undefined,
+    returnDate: api.returnDate,
+    returnTime: api.returnTime ?? undefined,
+    budget: {
+      totalBudget: decimalToNumber(api.totalBudget) ?? null,
+      currency: api.currency,
+    },
+    createdAt: api.createdAt,
+    updatedAt: api.updatedAt,
+  };
+}
+
+/**
+ * Translates a bare ApiTrip (no relations) into a full frontend Trip, with
+ * every relation defaulted to empty — for the moment right after creating
+ * a trip, when nothing nested exists yet.
+ */
+export function translateNewTrip(api: ApiTrip): Trip {
+  const basics = translateTripBasics(api);
+  return {
+    ...basics,
+    travelSegments: [],
+    accommodations: [],
+    advanceBookings: [],
+    itineraryDays: [],
+    budget: { ...basics.budget, allocations: [] },
+  };
+}
+
+export function translateFullTrip(api: ApiFullTrip): TranslatedTrip {
+  const allBlocks: Record<string, ItineraryBlock> = {};
+  const itineraryDays: ItineraryDay[] = [];
+
+  for (const apiDay of api.itineraryDays) {
+    const { day, blocks } = translateItineraryDay(apiDay);
+    itineraryDays.push(day);
+    Object.assign(allBlocks, blocks);
+  }
+
+  const basics = translateTripBasics(api);
+  const trip: Trip = {
+    ...basics,
+    travelSegments: api.travelSegments.map(translateTravelSegment),
+    accommodations: api.accommodations.map(translateAccommodation),
+    advanceBookings: api.advanceBookings.map(translateAdvanceBooking),
+    itineraryDays,
+    budget: {
+      ...basics.budget,
+      allocations: api.budgetAllocations.map(translateBudgetAllocation),
+    },
+  };
+
+  return { trip, blocks: allBlocks };
+}
