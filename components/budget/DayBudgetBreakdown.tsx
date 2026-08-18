@@ -38,12 +38,13 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
           min="0"
           step="0.01"
           autoFocus
+          aria-label="Day budget amount"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && commit()}
           className="w-24 py-1 text-xs"
         />
-        <button onClick={commit} className="rounded-lg p-1 text-primary-700 hover:bg-primary-tint">
+        <button onClick={commit} aria-label="Save day budget" className="rounded-lg p-1 text-primary-700 hover:bg-primary-tint">
           <Check className="h-3.5 w-3.5" />
         </button>
       </div>

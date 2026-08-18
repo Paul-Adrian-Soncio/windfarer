@@ -6,6 +6,7 @@ import * as accommodationRepository from "@/lib/repository/accommodationReposito
 import * as advanceBookingRepository from "@/lib/repository/advanceBookingRepository";
 import * as itineraryDayRepository from "@/lib/repository/itineraryDayRepository";
 import * as itineraryBlockRepository from "@/lib/repository/itineraryBlockRepository";
+import * as budgetAllocationRepository from "@/lib/repository/budgetAllocationRepository";
 import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
@@ -83,11 +84,14 @@ interface TripState {
   // wait on the network for a drag to feel done.
   moveBlock: (blockId: string, toDayId: string, toIndex: number) => void;
 
-  // Budget
-  setTotalBudget: (amount: number | null) => void;
-  setCurrency: (currency: string) => void;
-  upsertAllocation: (alloc: Omit<BudgetAllocation, "id"> & { id?: string }) => void;
-  removeAllocation: (id: string) => void;
+  // Budget — wired to the real API.
+  setTotalBudget: (amount: number | null) => Promise<void>;
+  setCurrency: (currency: string) => Promise<void>;
+  // Scope (kind + dayId/blockId) can only be set at creation — pass an id
+  // to edit an existing allocation's label/amount, omit it to create a new
+  // one. See lib/repository/budgetAllocationRepository.ts.
+  upsertAllocation: (alloc: Omit<BudgetAllocation, "id"> & { id?: string }) => Promise<void>;
+  removeAllocation: (id: string) => Promise<void>;
 }
 
 function touch(trip: Trip): Trip {
@@ -534,37 +538,79 @@ export const useTripStore = create<TripState>()((set, get) => ({
           });
       },
 
-      setTotalBudget: (amount) => {
+      setTotalBudget: async (amount) => {
         const { trip } = get();
         if (!trip) return;
-        set({ trip: touch({ ...trip, budget: { ...trip.budget, totalBudget: amount } }) });
+        try {
+          const updated = await tripRepository.updateTripBasics(trip.id, { totalBudget: amount });
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, budget: { ...state.trip.budget, totalBudget: updated.budget.totalBudget } }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      setCurrency: (currency) => {
+      setCurrency: async (currency) => {
         const { trip } = get();
         if (!trip) return;
-        set({ trip: touch({ ...trip, budget: { ...trip.budget, currency } }) });
+        try {
+          const updated = await tripRepository.updateTripBasics(trip.id, { currency });
+          set((state) =>
+            state.trip
+              ? { trip: touch({ ...state.trip, budget: { ...state.trip.budget, currency: updated.budget.currency } }) }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      upsertAllocation: (alloc) => {
+      upsertAllocation: async (alloc) => {
         const { trip } = get();
         if (!trip) return;
-        const id = alloc.id ?? generateId();
-        const existingIndex = trip.budget.allocations.findIndex((a) => a.id === id);
-        const newAllocation: BudgetAllocation = { ...alloc, id };
-        const allocations =
-          existingIndex >= 0
-            ? trip.budget.allocations.map((a, i) => (i === existingIndex ? newAllocation : a))
-            : [...trip.budget.allocations, newAllocation];
-        set({ trip: touch({ ...trip, budget: { ...trip.budget, allocations } }) });
+        try {
+          const saved = alloc.id
+            ? await budgetAllocationRepository.updateBudgetAllocation(trip.id, alloc.id, {
+                label: alloc.label,
+                amount: alloc.amount,
+              })
+            : await budgetAllocationRepository.createBudgetAllocation(trip.id, alloc);
+          set((state) => {
+            if (!state.trip) return state;
+            const existingIndex = state.trip.budget.allocations.findIndex((a) => a.id === saved.id);
+            const allocations =
+              existingIndex >= 0
+                ? state.trip.budget.allocations.map((a, i) => (i === existingIndex ? saved : a))
+                : [...state.trip.budget.allocations, saved];
+            return { trip: touch({ ...state.trip, budget: { ...state.trip.budget, allocations } }) };
+          });
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
-      removeAllocation: (id) => {
+      removeAllocation: async (id) => {
         const { trip } = get();
         if (!trip) return;
-        set({
-          trip: touch({
-            ...trip,
-            budget: { ...trip.budget, allocations: trip.budget.allocations.filter((a) => a.id !== id) },
-          }),
-        });
+        try {
+          await budgetAllocationRepository.deleteBudgetAllocation(trip.id, id);
+          set((state) =>
+            state.trip
+              ? {
+                  trip: touch({
+                    ...state.trip,
+                    budget: { ...state.trip.budget, allocations: state.trip.budget.allocations.filter((a) => a.id !== id) },
+                  }),
+                }
+              : state
+          );
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
       },
 }));
 

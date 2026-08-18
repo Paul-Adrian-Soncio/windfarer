@@ -25,8 +25,17 @@ export type CreateTripInput = z.infer<typeof createTripSchema>;
 // PATCH allows updating any subset of the same fields, plus totalBudget
 // (not part of trip creation in the current frontend flow, but editable
 // afterward from the Budget tab). .partial() makes every field optional
-// while keeping the same validation rules for whichever fields ARE sent.
+// while keeping the same validation rules for whichever fields ARE sent —
+// EXCEPT currency, which .partial() would otherwise leave defaulting to
+// "USD" via createTripSchema's .default("USD") even when omitted (Zod
+// applies .default() to fill in a genuinely missing key regardless of
+// .partial()). Re-declaring it here without a default means an omitted
+// currency in a PATCH body correctly stays absent from result.data, so
+// prisma.trip.update's partial data: result.data never touches the
+// column — instead of silently resetting it to USD on every PATCH that
+// isn't itself a currency change.
 export const updateTripSchema = createTripSchema.partial().extend({
+  currency: z.string().length(3).optional(),
   totalBudget: z.number().nullable().optional(),
 });
 

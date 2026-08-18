@@ -49,7 +49,11 @@ export function BudgetSummaryCards({
             Total budget
           </CardTitle>
           {!editing && (
-            <button onClick={() => setEditing(true)} className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-primary-700">
+            <button
+              onClick={() => setEditing(true)}
+              aria-label="Edit total budget"
+              className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-primary-700"
+            >
               <Pencil className="h-4 w-4" />
             </button>
           )}
@@ -57,19 +61,38 @@ export function BudgetSummaryCards({
 
         {editing ? (
           <div className="mt-4 flex items-center gap-2">
-            <Select
-              value={trip.budget.currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-[92px] shrink-0 px-2.5"
-            >
-              {CURRENCY_OPTIONS.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code}
-                </option>
-              ))}
-            </Select>
-            <Input type="number" min="0" step="0.01" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="0.00" />
-            <button onClick={commit} className="shrink-0 rounded-lg p-2.5 text-primary-700 hover:bg-primary-tint">
+            {/* Select/Input both come with w-full baked into their base
+                styles (see components/ui/Input.tsx) — cn() here is a plain
+                string join, not tailwind-merge, so a narrower className
+                can't reliably beat that in a same-specificity tie. Sizing
+                each one via a wrapper div sidesteps the conflict instead. */}
+            <div className="w-[92px] shrink-0">
+              <Select
+                aria-label="Currency"
+                value={trip.budget.currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="px-2.5"
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="min-w-0 flex-1">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                autoFocus
+                aria-label="Total budget amount"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <button onClick={commit} aria-label="Save total budget" className="shrink-0 rounded-lg p-2.5 text-primary-700 hover:bg-primary-tint">
               <Check className="h-4 w-4" />
             </button>
           </div>

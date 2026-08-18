@@ -42,11 +42,10 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
           returnDate,
           returnTime: returnTime || undefined,
         });
-        // NOTE: currency changes on an existing trip aren't wired to the API
-        // yet — setCurrency is still local-only, part of the budget-related
-        // actions this migration hasn't reached. Real for new trips (below),
-        // a known gap for edits to an existing one.
-        if (currency !== trip.budget.currency) setCurrency(currency);
+        // Currency lives on the Trip row but isn't part of updateTripBasics's
+        // patch shape (that's Trip's own fields; budget is a nested object) —
+        // a separate call, same as the Budget tab's currency picker uses.
+        if (currency !== trip.budget.currency) await setCurrency(currency);
       } else {
         await createTrip({
           destination: { name: destination, lat: null, lng: null },
