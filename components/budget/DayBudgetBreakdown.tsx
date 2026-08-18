@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Pencil, Check } from "lucide-react";
+import { CalendarDays, Pencil, Check, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Input } from "@/components/ui/Input";
@@ -13,12 +13,14 @@ import { cn } from "@/lib/cn";
 
 function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentAmount: number | null }) {
   const upsertAllocation = useTripStore((s) => s.upsertAllocation);
+  const removeAllocation = useTripStore((s) => s.removeAllocation);
   const trip = useTripStore((s) => s.trip);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(currentAmount?.toString() ?? "");
 
+  const existing = trip?.budget.allocations.find((a) => a.scope.kind === "day" && a.scope.dayId === dayId);
+
   function commit() {
-    const existing = trip?.budget.allocations.find((a) => a.scope.kind === "day" && a.scope.dayId === dayId);
     if (draft) {
       upsertAllocation({
         id: existing?.id,
@@ -28,6 +30,10 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
       });
     }
     setEditing(false);
+  }
+
+  function remove() {
+    if (existing) removeAllocation(existing.id).catch(() => {});
   }
 
   if (editing) {
@@ -52,17 +58,24 @@ function DayAllocationEditor({ dayId, currentAmount }: { dayId: string; currentA
   }
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className="mt-2 flex items-center gap-1.5 text-xs text-ink-500 hover:text-accent-500"
-    >
-      {currentAmount !== null ? (
-        `Budget: ${fmtMoney(currentAmount, trip?.budget.currency)}`
-      ) : (
-        <span className="font-semibold text-accent-500">Set day budget</span>
+    <div className="mt-2 flex items-center gap-1.5">
+      <button
+        onClick={() => setEditing(true)}
+        className="flex items-center gap-1.5 text-xs text-ink-500 hover:text-accent-500"
+      >
+        {currentAmount !== null ? (
+          `Budget: ${fmtMoney(currentAmount, trip?.budget.currency)}`
+        ) : (
+          <span className="font-semibold text-accent-500">Set day budget</span>
+        )}
+        <Pencil className={cn("h-3 w-3", currentAmount === null && "text-accent-500")} />
+      </button>
+      {existing && (
+        <button onClick={remove} aria-label="Remove day budget" className="rounded-lg p-1 text-ink-500 hover:bg-paper hover:text-danger-600">
+          <Trash2 className="h-3 w-3" />
+        </button>
       )}
-      <Pencil className={cn("h-3 w-3", currentAmount === null && "text-accent-500")} />
-    </button>
+    </div>
   );
 }
 
