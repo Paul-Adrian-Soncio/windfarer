@@ -13,7 +13,6 @@ import {
   TravelSegment,
   Accommodation,
   AdvanceBooking,
-  ItineraryDay,
   ItineraryBlock,
   BlockType,
   BudgetAllocation,
@@ -72,12 +71,16 @@ interface TripState {
   setDayDate: (dayId: string, date: string | undefined) => Promise<void>;
   removeDay: (dayId: string) => Promise<void>;
 
-  // Itinerary blocks — create/update/delete wired to the real API.
-  // moveBlock (the drag-and-drop reorder) is still local-only — it needs
-  // an optimistic-update-with-rollback design, saved for its own session.
+  // Itinerary blocks — wired to the real API.
   addBlock: (dayId: string, block: Omit<ItineraryBlock, "id" | "dayId">, index?: number) => Promise<void>;
   updateBlock: (id: string, patch: Partial<ItineraryBlock>) => Promise<void>;
   removeBlock: (id: string) => Promise<void>;
+  // Optimistic: applies the reorder to local state immediately (so
+  // dragging feels instant), then commits it to the server in the
+  // background. Rolls back to the pre-drag arrangement if the request
+  // fails. Deliberately NOT awaited by its caller (ItineraryDndContext) —
+  // dnd-kit's onDragEnd isn't async, and the whole point is the UI doesn't
+  // wait on the network for a drag to feel done.
   moveBlock: (blockId: string, toDayId: string, toIndex: number) => void;
 
   // Budget
@@ -475,6 +478,13 @@ export const useTripStore = create<TripState>()((set, get) => ({
         if (!block) return;
         const fromDayId = block.dayId;
 
+        // Snapshot exactly what we're about to change, so a failed
+        // request can restore precisely this — not the whole trip, just
+        // the two arrays a move ever touches (the source and destination
+        // day's blockIds) plus the moved block's own dayId.
+        const previousItineraryDays = trip.itineraryDays;
+        const previousBlock = block;
+
         const itineraryDays = trip.itineraryDays.map((d) => ({ ...d, blockIds: [...d.blockIds] }));
         const fromDay = itineraryDays.find((d) => d.id === fromDayId);
         const toDay = itineraryDays.find((d) => d.id === toDayId);
@@ -484,10 +494,44 @@ export const useTripStore = create<TripState>()((set, get) => ({
         const clampedIndex = Math.max(0, Math.min(toIndex, toDay.blockIds.length));
         toDay.blockIds.splice(clampedIndex, 0, blockId);
 
-        set({
-          trip: touch({ ...trip, itineraryDays }),
-          blocks: { ...blocks, [blockId]: { ...block, dayId: toDayId } },
-        });
+        // Optimistic: apply immediately so the drag feels instant.
+        set((state) =>
+          state.trip
+            ? {
+                trip: touch({ ...state.trip, itineraryDays }),
+                blocks: { ...state.blocks, [blockId]: { ...block, dayId: toDayId } },
+              }
+            : state
+        );
+
+        // Commit in the background. Deliberately not awaited by the
+        // caller (dnd-kit's onDragEnd isn't async) — this function itself
+        // stays synchronous from the caller's perspective, and handles
+        // its own success/failure entirely internally.
+        itineraryBlockRepository
+          .moveItineraryBlock(trip.id, fromDayId, blockId, toDayId, toIndex)
+          .then((confirmedBlock) => {
+            // Reconcile with the server's exact result in case it computed
+            // something slightly different (e.g. another change landed
+            // between our optimistic update and this response resolving).
+            set((state) =>
+              state.trip && state.blocks[blockId]
+                ? { blocks: { ...state.blocks, [blockId]: confirmedBlock } }
+                : state
+            );
+          })
+          .catch((err) => {
+            // Roll back to exactly the pre-drag arrangement.
+            set((state) =>
+              state.trip
+                ? {
+                    trip: touch({ ...state.trip, itineraryDays: previousItineraryDays }),
+                    blocks: { ...state.blocks, [blockId]: previousBlock },
+                    error: errorMessage(err),
+                  }
+                : state
+            );
+          });
       },
 
       setTotalBudget: (amount) => {

@@ -76,3 +76,25 @@ export async function updateItineraryBlock(
 export async function deleteItineraryBlock(tripId: string, dayId: string, blockId: string): Promise<void> {
   await apiFetch<void>(`/api/trips/${tripId}/days/${dayId}/blocks/${blockId}`, { method: "DELETE" });
 }
+
+/**
+ * Commits a drag-and-drop reorder to the server. The route is nested under
+ * the block's CURRENT day (fromDayId) for the ownership check, but the
+ * body's dayId is the TARGET day — sending dayId and/or sortOrder in the
+ * body is what makes the PATCH route detect this as a move and run it
+ * through the moveBlock() transaction (lib/itineraryReorder.ts) instead of
+ * a plain field update, keeping every sibling block's sortOrder consistent.
+ */
+export async function moveItineraryBlock(
+  tripId: string,
+  fromDayId: string,
+  blockId: string,
+  toDayId: string,
+  toIndex: number
+): Promise<ItineraryBlock> {
+  const apiBlock = await apiFetch<ApiItineraryBlock>(
+    `/api/trips/${tripId}/days/${fromDayId}/blocks/${blockId}`,
+    { method: "PATCH", body: JSON.stringify({ dayId: toDayId, sortOrder: toIndex }) }
+  );
+  return translateItineraryBlock(apiBlock);
+}
