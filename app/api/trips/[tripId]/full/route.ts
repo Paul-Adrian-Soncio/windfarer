@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string }>;
@@ -16,8 +17,11 @@ interface RouteContext {
 // row, in the same query — this is a JOIN under the hood, not N+1 separate
 // queries. Nested `include`/`orderBy` inside a relation (see `days` below)
 // applies to that specific relation's rows only.
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
@@ -36,10 +40,6 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       },
     },
   });
-
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
 
   return NextResponse.json(trip);
 }

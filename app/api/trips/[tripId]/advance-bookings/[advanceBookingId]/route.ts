@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateAdvanceBookingSchema } from "@/lib/validation/advanceBooking";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; advanceBookingId: string }>;
@@ -16,8 +17,11 @@ async function findAdvanceBookingInTrip(tripId: string, advanceBookingId: string
 }
 
 // GET /api/trips/[tripId]/advance-bookings/[advanceBookingId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, advanceBookingId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const advanceBooking = await findAdvanceBookingInTrip(tripId, advanceBookingId);
   if (!advanceBooking) {
@@ -30,6 +34,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // PATCH /api/trips/[tripId]/advance-bookings/[advanceBookingId]
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, advanceBookingId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAdvanceBookingInTrip(tripId, advanceBookingId);
   if (!existing) {
@@ -60,8 +67,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 // DELETE /api/trips/[tripId]/advance-bookings/[advanceBookingId]
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, advanceBookingId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAdvanceBookingInTrip(tripId, advanceBookingId);
   if (!existing) {

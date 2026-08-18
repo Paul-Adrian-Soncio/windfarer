@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createTripSchema } from "@/lib/validation/trip";
 
-// Hardcoded until auth exists — every trip created through this route
-// belongs to this one test user. Replace with the logged-in user's id
-// once auth is wired up.
-const TEST_USER_ID = "278ffb3b-fce1-4a17-91d0-ebaee99c81e5";
-
 // GET /api/trips
-// Lists every trip in the database. No filtering by user yet — that comes
-// once auth exists and we know *whose* trips to return.
+// Lists the signed-in user's own trips only.
 export async function GET() {
-  const trips = await prisma.trip.findMany();
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  const trips = await prisma.trip.findMany({ where: { userId: session.user.id } });
   return NextResponse.json(trips);
 }
 
 // POST /api/trips
-// Creates a new trip. Expects a JSON body matching createTripSchema.
+// Creates a new trip owned by the signed-in user. Expects a JSON body
+// matching createTripSchema.
 export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
   const trip = await prisma.trip.create({
     data: {
       ...result.data,
-      userId: TEST_USER_ID,
+      userId: session.user.id,
     },
   });
 

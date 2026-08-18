@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateTravelSegmentSchema } from "@/lib/validation/travelSegment";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; segmentId: string }>;
@@ -21,8 +22,11 @@ async function findSegmentInTrip(tripId: string, segmentId: string) {
 }
 
 // GET /api/trips/[tripId]/segments/[segmentId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, segmentId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const segment = await findSegmentInTrip(tripId, segmentId);
   if (!segment) {
@@ -35,6 +39,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // PATCH /api/trips/[tripId]/segments/[segmentId]
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, segmentId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findSegmentInTrip(tripId, segmentId);
   if (!existing) {
@@ -65,8 +72,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 // DELETE /api/trips/[tripId]/segments/[segmentId]
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, segmentId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findSegmentInTrip(tripId, segmentId);
   if (!existing) {

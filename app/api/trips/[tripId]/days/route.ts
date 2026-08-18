@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { createItineraryDaySchema } from "@/lib/validation/itineraryDay";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string }>;
@@ -9,13 +10,11 @@ interface RouteContext {
 
 // GET /api/trips/[tripId]/days
 // Lists days for this trip, ordered left-to-right per sortOrder.
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const days = await prisma.itineraryDay.findMany({
     where: { tripId },
@@ -28,10 +27,8 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   let body: unknown;
   try {

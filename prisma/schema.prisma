@@ -55,14 +55,79 @@ enum BudgetScopeKind {
 
 // ---------- Models ----------
 
-// Minimal placeholder until auth is wired up next. Just enough to make the
-// User -> Trip relationship real.
+// Real accounts, via Better Auth's Prisma adapter (lib/auth.ts). The core
+// fields below (email, emailVerified, name, image, createdAt, updatedAt) are
+// required by Better Auth with these exact names/types — everything else
+// about this model (id default, the trips relation) is ours to keep, since
+// Better Auth is designed to extend an app's existing User table rather than
+// own it outright.
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  trips Trip[]
+  trips    Trip[]
+  sessions Session[]
+  accounts Account[]
+}
+
+// Better Auth's session table — one row per signed-in device/browser. token
+// is the value stored in the session cookie; expiresAt/ipAddress/userAgent
+// are Better Auth's own bookkeeping, not something the app reads directly.
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Better Auth's credential/provider table. For email+password (the only
+// provider enabled today — see lib/auth.ts), providerId is "credential" and
+// password holds the hashed password; the OAuth-only fields (accessToken,
+// etc.) stay null until a social provider is ever added.
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  // Set by Better Auth's email/password provider (e.g. "local:credential")
+  // — not documented in the schema Better Auth's own docs/CLI publish, but
+  // required by the installed version's actual runtime write (confirmed by
+  // testing a real sign-up against this exact version).
+  issuer                String?
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Better Auth's short-lived verification tokens (email verification,
+// password reset, etc.) — not used yet since emailAndPassword's
+// requireEmailVerification is off, but part of the adapter's required schema.
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
 }
 
 model Trip {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateTripSchema } from "@/lib/validation/trip";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 // Next.js 16 delivers dynamic route params as a Promise — must be awaited
 // before use. This type describes that shape for every handler below.
@@ -14,24 +15,26 @@ interface RouteContext {
 }
 
 // GET /api/trips/[tripId]
-// Fetches a single trip by id. 404s if no trip with that id exists.
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+// Fetches a single trip by id. 404s if it doesn't exist OR isn't yours —
+// see requireTripOwnership for why those two cases look identical.
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
+
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
-
   return NextResponse.json(trip);
 }
 
 // PATCH /api/trips/[tripId]
 // Partially updates a trip — only the fields present in the request body
-// are changed. 404s if no trip with that id exists.
+// are changed. 404s if it doesn't exist OR isn't yours.
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   let body: unknown;
   try {
@@ -48,11 +51,6 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  const existing = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!existing) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
-
   const trip = await prisma.trip.update({
     where: { id: tripId },
     data: result.data,
@@ -65,13 +63,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 // Deletes a trip. Every related row (travel segments, accommodations,
 // itinerary days/blocks, budget allocations) is removed automatically via
 // the onDelete: Cascade relationships defined in schema.prisma.
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const existing = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!existing) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   await prisma.trip.delete({ where: { id: tripId } });
 

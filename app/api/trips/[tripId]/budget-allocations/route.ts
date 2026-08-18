@@ -3,19 +3,18 @@ import { z } from "zod";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createBudgetAllocationSchema } from "@/lib/validation/budgetAllocation";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string }>;
 }
 
 // GET /api/trips/[tripId]/budget-allocations
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const allocations = await prisma.budgetAllocation.findMany({ where: { tripId } });
   return NextResponse.json(allocations);
@@ -25,10 +24,8 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   let body: unknown;
   try {

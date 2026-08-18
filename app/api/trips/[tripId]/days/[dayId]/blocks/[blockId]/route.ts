@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateItineraryBlockSchema } from "@/lib/validation/itineraryBlock";
 import { moveBlock } from "@/lib/itineraryReorder";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; dayId: string; blockId: string }>;
@@ -26,8 +27,11 @@ async function findBlockInTripDay(tripId: string, dayId: string, blockId: string
 }
 
 // GET /api/trips/[tripId]/days/[dayId]/blocks/[blockId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId, blockId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const block = await findBlockInTripDay(tripId, dayId, blockId);
   if (!block) {
@@ -44,6 +48,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // sortOrder consistent via a transaction.
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId, blockId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findBlockInTripDay(tripId, dayId, blockId);
   if (!existing) {
@@ -87,8 +94,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 // DELETE /api/trips/[tripId]/days/[dayId]/blocks/[blockId]
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId, blockId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findBlockInTripDay(tripId, dayId, blockId);
   if (!existing) {

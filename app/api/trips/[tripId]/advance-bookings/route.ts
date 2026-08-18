@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { createAdvanceBookingSchema } from "@/lib/validation/advanceBooking";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string }>;
 }
 
 // GET /api/trips/[tripId]/advance-bookings
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const advanceBookings = await prisma.advanceBooking.findMany({ where: { tripId } });
   return NextResponse.json(advanceBookings);
@@ -24,10 +23,8 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { tripId } = await params;
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) {
-    return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-  }
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   let body: unknown;
   try {

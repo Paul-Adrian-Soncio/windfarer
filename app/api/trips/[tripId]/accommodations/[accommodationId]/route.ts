@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateAccommodationSchema } from "@/lib/validation/accommodation";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; accommodationId: string }>;
@@ -18,8 +19,11 @@ async function findAccommodationInTrip(tripId: string, accommodationId: string) 
 }
 
 // GET /api/trips/[tripId]/accommodations/[accommodationId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, accommodationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const accommodation = await findAccommodationInTrip(tripId, accommodationId);
   if (!accommodation) {
@@ -32,6 +36,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // PATCH /api/trips/[tripId]/accommodations/[accommodationId]
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, accommodationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAccommodationInTrip(tripId, accommodationId);
   if (!existing) {
@@ -62,8 +69,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 // DELETE /api/trips/[tripId]/accommodations/[accommodationId]
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, accommodationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAccommodationInTrip(tripId, accommodationId);
   if (!existing) {

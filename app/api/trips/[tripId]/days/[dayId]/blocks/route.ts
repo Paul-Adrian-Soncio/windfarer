@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { createItineraryBlockSchema } from "@/lib/validation/itineraryBlock";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; dayId: string }>;
@@ -16,8 +17,11 @@ async function findDayInTrip(tripId: string, dayId: string) {
 }
 
 // GET /api/trips/[tripId]/days/[dayId]/blocks
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const day = await findDayInTrip(tripId, dayId);
   if (!day) {
@@ -34,6 +38,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // POST /api/trips/[tripId]/days/[dayId]/blocks
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const day = await findDayInTrip(tripId, dayId);
   if (!day) {

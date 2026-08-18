@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateBudgetAllocationSchema } from "@/lib/validation/budgetAllocation";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; allocationId: string }>;
@@ -16,8 +17,11 @@ async function findAllocationInTrip(tripId: string, allocationId: string) {
 }
 
 // GET /api/trips/[tripId]/budget-allocations/[allocationId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, allocationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const allocation = await findAllocationInTrip(tripId, allocationId);
   if (!allocation) {
@@ -32,6 +36,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // scopeKind/dayId/blockId are intentionally not part of this schema.
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, allocationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAllocationInTrip(tripId, allocationId);
   if (!existing) {
@@ -62,8 +69,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 }
 
 // DELETE /api/trips/[tripId]/budget-allocations/[allocationId]
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, allocationId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findAllocationInTrip(tripId, allocationId);
   if (!existing) {

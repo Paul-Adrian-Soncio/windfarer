@@ -1,4 +1,19 @@
+"use client";
+
+import { LogOut } from "lucide-react";
+import { useSession, signOut } from "@/lib/auth-client";
+
 export function AppHeader() {
+  const { data: session } = useSession();
+
+  async function handleSignOut() {
+    await signOut();
+    // Full navigation, not router.push — see the matching note in
+    // app/sign-in/page.tsx for why the client router can race the session
+    // cache around an auth state change.
+    window.location.href = "/sign-in";
+  }
+
   return (
     <header className="relative overflow-hidden bg-hero-gradient px-5 pb-4 pt-4 text-[#F3EFE4]">
       <svg
@@ -30,6 +45,15 @@ export function AppHeader() {
           <p className="font-display text-[19px] font-bold leading-tight tracking-tight text-white">WindFarer</p>
           <p className="mt-0.5 text-[11.5px] text-[#CFE0D3]">Your journey, planned with a friend</p>
         </div>
+        {session && (
+          <button
+            onClick={handleSignOut}
+            className="ml-auto flex shrink-0 items-center gap-1.5 rounded-pill border-[1.5px] border-white/25 px-3 py-1.5 text-[12.5px] text-[#F1EFE6] transition-colors hover:bg-white/10"
+          >
+            <span className="hidden sm:inline">{session.user.email}</span>
+            <LogOut className="h-3.5 w-3.5" strokeWidth={1.9} />
+          </button>
+        )}
       </div>
     </header>
   );

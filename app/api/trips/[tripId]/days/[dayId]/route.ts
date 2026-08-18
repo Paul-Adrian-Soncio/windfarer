@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { updateItineraryDaySchema } from "@/lib/validation/itineraryDay";
+import { isAuthResponse, requireTripOwnership } from "@/lib/auth/requireTripOwnership";
 
 interface RouteContext {
   params: Promise<{ tripId: string; dayId: string }>;
@@ -16,8 +17,11 @@ async function findDayInTrip(tripId: string, dayId: string) {
 }
 
 // GET /api/trips/[tripId]/days/[dayId]
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const day = await findDayInTrip(tripId, dayId);
   if (!day) {
@@ -30,6 +34,9 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 // PATCH /api/trips/[tripId]/days/[dayId]
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findDayInTrip(tripId, dayId);
   if (!existing) {
@@ -61,8 +68,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
 // DELETE /api/trips/[tripId]/days/[dayId]
 // Cascade deletes every block belonging to this day too.
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { tripId, dayId } = await params;
+
+  const ownership = await requireTripOwnership(request, tripId);
+  if (isAuthResponse(ownership)) return ownership;
 
   const existing = await findDayInTrip(tripId, dayId);
   if (!existing) {
