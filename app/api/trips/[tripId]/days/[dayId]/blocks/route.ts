@@ -62,9 +62,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
 
+  // Same fix as itineraryDay's POST route — the frontend never sends
+  // sortOrder on create, so compute the real next slot within this day
+  // instead of letting every new block collide at the same value.
+  let sortOrder = result.data.sortOrder;
+  if (sortOrder === undefined) {
+    const { _max } = await prisma.itineraryBlock.aggregate({ where: { dayId }, _max: { sortOrder: true } });
+    sortOrder = (_max.sortOrder ?? -1) + 1;
+  }
+
   const block = await prisma.itineraryBlock.create({
     data: {
       ...result.data,
+      sortOrder,
       dayId,
     },
   });

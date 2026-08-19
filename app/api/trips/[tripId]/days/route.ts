@@ -45,9 +45,23 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
 
+  // The frontend never sends sortOrder on create (see
+  // lib/repository/itineraryDayRepository.ts) — every new day needs to land
+  // after every existing one, not all pile up at the same value. Ties have
+  // no defined order in Postgres, so the list only "looked" stable by luck
+  // of physical row order, until any UPDATE (e.g. renaming a day) could
+  // reshuffle it, which is exactly the bug this fixes. Compute the real
+  // next slot unless the caller explicitly asked for a specific one.
+  let sortOrder = result.data.sortOrder;
+  if (sortOrder === undefined) {
+    const { _max } = await prisma.itineraryDay.aggregate({ where: { tripId }, _max: { sortOrder: true } });
+    sortOrder = (_max.sortOrder ?? -1) + 1;
+  }
+
   const day = await prisma.itineraryDay.create({
     data: {
       ...result.data,
+      sortOrder,
       tripId,
     },
   });

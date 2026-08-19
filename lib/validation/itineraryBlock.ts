@@ -19,7 +19,13 @@ export const createItineraryBlockSchema = z.object({
   mealType: mealTypeSchema.nullable().optional(),
   travelMode: localTravelModeSchema.nullable().optional(),
 
-  sortOrder: z.number().int().default(0),
+  // No .default(0) — the frontend never sends sortOrder on create (see
+  // lib/repository/itineraryBlockRepository.ts's createItineraryBlock),
+  // and a default here would silently fill it in anyway, making the block
+  // creation route unable to tell "wasn't sent" from "explicitly wants
+  // slot 0." Same bug shape as itineraryDay's sortOrder, fixed alongside
+  // it — see app/api/trips/[tripId]/days/[dayId]/blocks/route.ts.
+  sortOrder: z.number().int().optional(),
 });
 
 export type CreateItineraryBlockInput = z.infer<typeof createItineraryBlockSchema>;
