@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Wallet, Pencil, Check } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { Input, Select } from "@/components/ui/Input";
+import { Input } from "@/components/ui/Input";
 import { useTripStore } from "@/store/tripStore";
 import { SpentByCategory } from "@/lib/budget/aggregate";
 import { fmtMoney } from "@/lib/money";
-import { CURRENCY_OPTIONS } from "@/lib/currency";
 import { Trip } from "@/types";
 
 const CATEGORY_LABELS: Record<keyof SpentByCategory, string> = {
@@ -28,7 +27,6 @@ export function BudgetSummaryCards({
   spentByCategory: SpentByCategory;
 }) {
   const setTotalBudget = useTripStore((s) => s.setTotalBudget);
-  const setCurrency = useTripStore((s) => s.setCurrency);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(trip.budget.totalBudget?.toString() ?? "");
 
@@ -61,25 +59,10 @@ export function BudgetSummaryCards({
 
         {editing ? (
           <div className="mt-4 flex items-center gap-2">
-            {/* Select/Input both come with w-full baked into their base
-                styles (see components/ui/Input.tsx) — cn() here is a plain
-                string join, not tailwind-merge, so a narrower className
-                can't reliably beat that in a same-specificity tie. Sizing
-                each one via a wrapper div sidesteps the conflict instead. */}
-            <div className="w-[92px] shrink-0">
-              <Select
-                aria-label="Currency"
-                value={trip.budget.currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="px-2.5"
-              >
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            {/* Currency isn't editable here — it's set once on the Planner
+                tab (Trip Basics) and just displayed everywhere else,
+                including this amount field. See TripBasicsForm.tsx if it
+                ever needs to change after a trip is created. */}
             <div className="min-w-0 flex-1">
               <Input
                 type="number"
