@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Field, Input, Textarea } from "@/components/ui/Input";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { Toggle } from "@/components/ui/Toggle";
 import { Button } from "@/components/ui/Button";
 import { Accommodation } from "@/types";
@@ -27,6 +29,15 @@ export function AccommodationForm({ onSubmit, onCancel }: AccommodationFormProps
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !checkIn || !checkOut) return;
+
+    // Same stale-value safety net as TripBasicsForm — the date picker
+    // disables picking an out-of-order check-out, but a prior selection can
+    // go stale if check-in changes afterward.
+    if (checkOut < checkIn) {
+      setSubmitError("Check-out date can't be before check-in date.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -59,17 +70,28 @@ export function AccommodationForm({ onSubmit, onCancel }: AccommodationFormProps
         </Field>
 
         <Field label="Check-in date">
-          <Input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} required />
+          <DatePicker value={checkIn} onChange={setCheckIn} required aria-label="Check-in date" />
         </Field>
         <Field label="Check-in time (optional)">
-          <Input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} />
+          <TimePicker value={checkInTime} onChange={setCheckInTime} aria-label="Check-in time" />
         </Field>
 
         <Field label="Check-out date">
-          <Input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} required />
+          <DatePicker
+            value={checkOut}
+            onChange={setCheckOut}
+            minDate={checkIn || undefined}
+            required
+            aria-label="Check-out date"
+          />
         </Field>
         <Field label="Check-out time (optional)">
-          <Input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} />
+          <TimePicker
+            value={checkOutTime}
+            onChange={setCheckOutTime}
+            minTime={checkOut && checkOut === checkIn ? checkInTime || undefined : undefined}
+            aria-label="Check-out time"
+          />
         </Field>
 
         <Field label="Cost (optional)">

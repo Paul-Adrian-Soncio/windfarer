@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Field, Input } from "@/components/ui/Input";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { Toggle } from "@/components/ui/Toggle";
 import { Button } from "@/components/ui/Button";
 import { TravelModeSelect } from "./TravelModeSelect";
@@ -27,9 +29,20 @@ export function TravelSegmentForm({ onSubmit, onCancel }: TravelSegmentFormProps
   const [flightInsurance, setFlightInsurance] = useState(false);
   const [mealsIncluded, setMealsIncluded] = useState(false);
   const [luggageCount, setLuggageCount] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Both dates are optional here, so only enforce ordering once both are
+    // actually set — same stale-value safety net as the other planner
+    // forms, for when arrival was picked before departure got moved later.
+    if (departureDate && arrivalDate && arrivalDate < departureDate) {
+      setSubmitError("Arrival date can't be before departure date.");
+      return;
+    }
+    setSubmitError(null);
+
     onSubmit({
       mode,
       providerName: providerName || undefined,
@@ -81,17 +94,27 @@ export function TravelSegmentForm({ onSubmit, onCancel }: TravelSegmentFormProps
         </Field>
 
         <Field label="Departure date">
-          <Input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} />
+          <DatePicker value={departureDate} onChange={setDepartureDate} aria-label="Departure date" />
         </Field>
         <Field label="Departure time">
-          <Input type="time" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
+          <TimePicker value={departureTime} onChange={setDepartureTime} aria-label="Departure time" />
         </Field>
 
         <Field label="Arrival date">
-          <Input type="date" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} />
+          <DatePicker
+            value={arrivalDate}
+            onChange={setArrivalDate}
+            minDate={departureDate || undefined}
+            aria-label="Arrival date"
+          />
         </Field>
         <Field label="Arrival time">
-          <Input type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} />
+          <TimePicker
+            value={arrivalTime}
+            onChange={setArrivalTime}
+            minTime={arrivalDate && arrivalDate === departureDate ? departureTime || undefined : undefined}
+            aria-label="Arrival time"
+          />
         </Field>
 
         <Field label="Cost (optional)">
@@ -117,6 +140,8 @@ export function TravelSegmentForm({ onSubmit, onCancel }: TravelSegmentFormProps
           </Field>
         </div>
       )}
+
+      {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
 
       <div className="flex gap-2">
         <Button type="submit">Add leg</Button>

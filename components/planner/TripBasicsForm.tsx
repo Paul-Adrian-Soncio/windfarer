@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { Compass } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Field, Input, Select } from "@/components/ui/Input";
+import { Field, Input } from "@/components/ui/Input";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { Button } from "@/components/ui/Button";
 import { useTripStore } from "@/store/tripStore";
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY } from "@/lib/currency";
@@ -28,6 +31,19 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!destination || !departureDate || !arrivalDate || !returnDate) return;
+
+    // The date pickers already disable picking an out-of-order date, but a
+    // value can still go stale — e.g. arrival was set, then departure got
+    // moved to something later than it. Catch that here rather than let it
+    // reach the server.
+    if (arrivalDate < departureDate) {
+      setSubmitError("Arrival date can't be before departure date.");
+      return;
+    }
+    if (returnDate < arrivalDate) {
+      setSubmitError("Return date can't be before arrival date.");
+      return;
+    }
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -84,36 +100,60 @@ export function TripBasicsForm({ trip }: { trip: Trip | null }) {
             />
           </Field>
           <Field label="Currency">
-            <Select value={currency} onChange={(e) => setCurrencyDraft(e.target.value)} className="sm:w-[110px]">
-              {CURRENCY_OPTIONS.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code} {c.symbol}
-                </option>
-              ))}
-            </Select>
+            <Dropdown
+              value={currency}
+              onChange={setCurrencyDraft}
+              options={CURRENCY_OPTIONS.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}` }))}
+              className="sm:w-[110px]"
+            />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Departure date" hint="Leaving home">
-            <Input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} required />
+            <DatePicker value={departureDate} onChange={setDepartureDate} required aria-label="Departure date" />
           </Field>
           <Field label="Departure time (optional)">
-            <Input type="time" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
+            <TimePicker value={departureTime} onChange={setDepartureTime} aria-label="Departure time" />
           </Field>
 
           <Field label="Arrival date" hint="Landing at destination">
-            <Input type="date" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} required />
+            <DatePicker
+              value={arrivalDate}
+              onChange={setArrivalDate}
+              minDate={departureDate || undefined}
+              required
+              aria-label="Arrival date"
+            />
           </Field>
           <Field label="Arrival time (optional)">
-            <Input type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)} />
+            <TimePicker
+              value={arrivalTime}
+              onChange={setArrivalTime}
+              // Only meaningful when arrival and departure are the same
+              // day — landing tomorrow can be any time, but landing today
+              // can't be before you left.
+              minTime={arrivalDate && arrivalDate === departureDate ? departureTime || undefined : undefined}
+              aria-label="Arrival time"
+            />
           </Field>
 
           <Field label="Return date" hint="Going home">
-            <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required />
+            <DatePicker
+              value={returnDate}
+              onChange={setReturnDate}
+              minDate={arrivalDate || departureDate || undefined}
+              required
+              aria-label="Return date"
+            />
           </Field>
           <Field label="Return time (optional)">
-            <Input type="time" value={returnTime} onChange={(e) => setReturnTime(e.target.value)} />
+            <TimePicker
+              value={returnTime}
+              onChange={setReturnTime}
+              minTime={returnDate && returnDate === arrivalDate ? arrivalTime || undefined : undefined}
+              aria-label="Return time"
+            />
           </Field>
         </div>
 

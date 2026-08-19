@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Field, Input, Select, Textarea } from "@/components/ui/Input";
+import { Field, Input, Textarea } from "@/components/ui/Input";
+import { TimePicker } from "@/components/ui/TimePicker";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { Button } from "@/components/ui/Button";
 import { BLOCK_TYPE_OPTIONS } from "@/lib/constants";
 import { BlockType, ItineraryBlock } from "@/types";
@@ -86,7 +88,7 @@ export function BlockEditorModal({ open, onClose, onSubmit, initial }: BlockEdit
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Scheduled time (optional)">
-            <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+            <TimePicker value={scheduledTime} onChange={setScheduledTime} aria-label="Scheduled time" />
           </Field>
           <Field label="Planned expense (optional)">
             <Input type="number" min="0" step="0.01" value={plannedExpense} onChange={(e) => setPlannedExpense(e.target.value)} placeholder="0.00" />
@@ -101,25 +103,21 @@ export function BlockEditorModal({ open, onClose, onSubmit, initial }: BlockEdit
 
         {type === "meal" && (
           <Field label="Meal">
-            <Select value={mealType} onChange={(e) => setMealType(e.target.value as typeof mealType)}>
-              {MEAL_TYPES.map((m) => (
-                <option key={m} value={m}>
-                  {m[0].toUpperCase() + m.slice(1)}
-                </option>
-              ))}
-            </Select>
+            <Dropdown
+              value={mealType}
+              onChange={(v) => setMealType(v as typeof mealType)}
+              options={MEAL_TYPES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
+            />
           </Field>
         )}
 
         {type === "travel" && (
           <Field label="Getting there by">
-            <Select value={travelMode} onChange={(e) => setTravelMode(e.target.value as typeof travelMode)}>
-              {LOCAL_TRAVEL_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m[0].toUpperCase() + m.slice(1)}
-                </option>
-              ))}
-            </Select>
+            <Dropdown
+              value={travelMode}
+              onChange={(v) => setTravelMode(v as typeof travelMode)}
+              options={LOCAL_TRAVEL_MODES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))}
+            />
           </Field>
         )}
 
