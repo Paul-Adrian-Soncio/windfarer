@@ -14,8 +14,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const { data: session, isPending } = useSession();
 
   useEffect(() => {
+    // Send logged-out visitors to the landing page first, not straight to
+    // the sign-in form — /sign-in itself stays directly reachable (its own
+    // "Sign in" link, bookmarks, etc.), this just controls where a gated
+    // route bounces someone who isn't authenticated yet.
     if (!isPending && !session) {
-      router.replace("/sign-in");
+      router.replace("/welcome");
     }
   }, [isPending, session, router]);
 
