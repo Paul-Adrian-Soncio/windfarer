@@ -33,7 +33,7 @@ export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: Itinera
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative rounded-sm border border-hair border-l-[3px] bg-surface p-3 pl-[13px] shadow-[0_6px_16px_-12px_rgba(43,39,33,0.4)] transition-shadow",
+        "group relative rounded-sm border border-hair border-l-[3px] bg-surface p-3 pl-[13px] shadow-[0_6px_16px_-12px_rgba(43,39,33,0.4)] transition-shadow",
         borderClass,
         isDragging && "opacity-40",
         overlay && "scale-[1.02] shadow-lift"
@@ -53,7 +53,7 @@ export function ItineraryBlockCard({ block, onEdit, onRemove, overlay }: Itinera
 
         <p className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink-900">{block.title}</p>
 
-        <div className="flex shrink-0 gap-0.5">
+        <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 group-active:opacity-100">
           <button onClick={onEdit} className="rounded-lg p-1 text-ink-500 hover:bg-primary-tint hover:text-primary-700" aria-label="Edit block">
             <Pencil className="h-3.5 w-3.5" />
           </button>

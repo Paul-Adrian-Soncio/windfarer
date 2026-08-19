@@ -25,6 +25,12 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
   const { setNodeRef, isOver } = useDroppable({ id: day.id });
 
   const [showAdd, setShowAdd] = useState(false);
+  // BlockEditorModal keeps its form state in useState(initial ?? default),
+  // which only evaluates on mount — since this modal instance stays mounted
+  // the whole time (only `open` toggles), reopening it for another "add"
+  // would otherwise still show whatever was typed last time. Bumping this
+  // key on every open forces React to remount the form fresh each time.
+  const [addKey, setAddKey] = useState(0);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(day.label);
@@ -107,7 +113,15 @@ export function DayCanvas({ day, blocks }: DayCanvasProps) {
         <Plus className="h-[15px] w-[15px]" strokeWidth={2.2} /> Add block
       </button>
 
-      <BlockEditorModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(block) => addBlock(day.id, block)} />
+      <BlockEditorModal
+        key={addKey}
+        open={showAdd}
+        onClose={() => {
+          setShowAdd(false);
+          setAddKey((k) => k + 1);
+        }}
+        onSubmit={(block) => addBlock(day.id, block)}
+      />
       {editingBlock && (
         <BlockEditorModal
           open
