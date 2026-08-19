@@ -2,6 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { useSession, signOut } from "@/lib/auth-client";
+import { Logo } from "@/components/ui/Logo";
 
 export function AppHeader() {
   const { data: session } = useSession();
@@ -30,17 +31,7 @@ export function AppHeader() {
         </g>
       </svg>
       <div className="relative mx-auto flex max-w-5xl items-center gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{
-            background: "linear-gradient(150deg, #3f8f6f, #1f4b3a)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,.28), 0 4px 10px -4px rgba(0,0,0,.4)",
-          }}
-        >
-          <svg viewBox="0 0 24 24" className="h-[21px] w-[21px] -rotate-[8deg] fill-white">
-            <path d="M2 21l21-9L2 3v7l15 2-15 2v5z" />
-          </svg>
-        </span>
+        <Logo size={40} />
         <div>
           <p className="font-display text-[19px] font-bold leading-tight tracking-tight text-white">WindFarer</p>
           <p className="mt-0.5 text-[11.5px] text-[#CFE0D3]">Your journey, planned with a friend</p>
