@@ -26,6 +26,25 @@ function toLowerEnum<T extends string>(value: string): T {
   return value.toLowerCase() as T;
 }
 
+/**
+ * Prisma DateTime fields always serialize to JSON as full ISO datetime
+ * strings (e.g. "2026-08-26T00:00:00.000Z"), never plain "YYYY-MM-DD" —
+ * even though the frontend's types call these fields `string` and every
+ * <input type="date"> in the app expects exactly "YYYY-MM-DD". A native
+ * date input silently renders blank (no error, no warning) if handed
+ * anything else, which is what made this bug invisible until someone
+ * actually looked for it — the value was always "there," just never valid
+ * for the input rendering it. Slicing to the date part here, once, at the
+ * API boundary, means every consumer downstream can trust the plain shape
+ * instead of each one having to defend against it individually (see
+ * lib/date/countdown.ts and lib/date/format.ts, which had each already
+ * discovered and worked around this same shape independently).
+ */
+function toDateOnly<T extends string | null | undefined>(value: T): T {
+  if (value === null || value === undefined) return value;
+  return value.slice(0, 10) as T;
+}
+
 function translatePlace(name: string | null, lat: number | null, lng: number | null) {
   if (!name) return undefined;
   return { name, lat, lng };
@@ -44,9 +63,9 @@ export function translateTravelSegment(api: ApiTravelSegment): TravelSegment {
     providerName: api.providerName ?? undefined,
     fromPlace: translatePlace(api.fromPlaceName, api.fromPlaceLat, api.fromPlaceLng),
     toPlace: translatePlace(api.toPlaceName, api.toPlaceLat, api.toPlaceLng),
-    departureDate: api.departureDate ?? undefined,
+    departureDate: toDateOnly(api.departureDate) ?? undefined,
     departureTime: api.departureTime ?? undefined,
-    arrivalDate: api.arrivalDate ?? undefined,
+    arrivalDate: toDateOnly(api.arrivalDate) ?? undefined,
     arrivalTime: api.arrivalTime ?? undefined,
     isLayover: api.isLayover,
     cost: decimalToNumber(api.cost),
@@ -68,9 +87,9 @@ export function translateAccommodation(api: ApiAccommodation): Accommodation {
     id: api.id,
     place: { name: api.placeName, lat: api.placeLat, lng: api.placeLng },
     name: api.name,
-    checkIn: api.checkIn,
+    checkIn: toDateOnly(api.checkIn),
     checkInTime: api.checkInTime ?? undefined,
-    checkOut: api.checkOut,
+    checkOut: toDateOnly(api.checkOut),
     checkOutTime: api.checkOutTime ?? undefined,
     willTransferLater: api.willTransferLater,
     cost: decimalToNumber(api.cost),
@@ -140,7 +159,7 @@ export function translateItineraryDay(api: ApiItineraryDay, blockIds: string[] =
   return {
     id: api.id,
     label: api.label,
-    date: api.date ?? undefined,
+    date: toDateOnly(api.date) ?? undefined,
     blockIds,
   };
 }
@@ -183,11 +202,11 @@ export function translateTripBasics(api: ApiTrip): TripBasics {
   return {
     id: api.id,
     destination: { name: api.destinationName, lat: api.destinationLat, lng: api.destinationLng },
-    departureDate: api.departureDate,
+    departureDate: toDateOnly(api.departureDate),
     departureTime: api.departureTime ?? undefined,
-    arrivalDate: api.arrivalDate,
+    arrivalDate: toDateOnly(api.arrivalDate),
     arrivalTime: api.arrivalTime ?? undefined,
-    returnDate: api.returnDate,
+    returnDate: toDateOnly(api.returnDate),
     returnTime: api.returnTime ?? undefined,
     budget: {
       totalBudget: decimalToNumber(api.totalBudget) ?? null,
