@@ -8,6 +8,13 @@ export function CountdownCard({ departureDate, departureTime }: { departureDate:
   const [countdown, setCountdown] = useState(() => getCountdown(departureDate, departureTime));
 
   useEffect(() => {
+    // Re-derive immediately when the trip being shown changes — not just on
+    // the next 60s tick — otherwise switching the active trip (see
+    // TripsListCard's "Set active") leaves this showing the previous
+    // trip's countdown for up to a minute, since useState's initializer
+    // only ever runs once on mount, and setInterval's first setCountdown
+    // call doesn't happen until 60s after the effect (re-)registers.
+    setCountdown(getCountdown(departureDate, departureTime));
     const interval = setInterval(() => setCountdown(getCountdown(departureDate, departureTime)), 60_000);
     return () => clearInterval(interval);
   }, [departureDate, departureTime]);

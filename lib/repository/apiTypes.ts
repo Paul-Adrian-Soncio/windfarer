@@ -22,6 +22,7 @@ export interface ApiTrip {
   returnTime: string | null;
   totalBudget: string | null;
   currency: string;
+  status: "SCHEDULED" | "ONGOING" | "COMPLETE" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
 }

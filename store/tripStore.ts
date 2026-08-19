@@ -10,6 +10,8 @@ import * as budgetAllocationRepository from "@/lib/repository/budgetAllocationRe
 import { ApiError } from "@/lib/repository/apiClient";
 import {
   Trip,
+  TripSummary,
+  TripStatus,
   Place,
   TravelSegment,
   Accommodation,
@@ -18,6 +20,13 @@ import {
   BlockType,
   BudgetAllocation,
 } from "@/types";
+
+const STATUS_TO_API: Record<TripStatus, "SCHEDULED" | "ONGOING" | "COMPLETE" | "CANCELLED"> = {
+  scheduled: "SCHEDULED",
+  ongoing: "ONGOING",
+  complete: "COMPLETE",
+  cancelled: "CANCELLED",
+};
 
 export interface CreateTripInput {
   destination: Place;
@@ -33,6 +42,18 @@ export interface CreateTripInput {
 export type TripLoadStatus = "idle" | "loading" | "ready" | "error";
 
 interface TripState {
+  // Every trip the signed-in user owns, lightweight (list view only) —
+  // powers the Home screen's trip list. Kept separate from `trip` (below)
+  // since the list never needs every trip's full nested data.
+  trips: TripSummary[];
+  // Mirrors the server's User.activeTripId (see app/api/user/active-trip).
+  // null means either "no trips exist" or "trips exist but none is active"
+  // (e.g. right after deleting the active one) — components that care
+  // which case it is should check `trips.length` too.
+  activeTripId: string | null;
+  // Full data for the active trip only — unchanged shape/usage from
+  // before multi-trip support; every existing page keeps reading this
+  // exactly as it always has.
   trip: Trip | null;
   blocks: Record<string, ItineraryBlock>;
 
@@ -43,9 +64,23 @@ interface TripState {
   status: TripLoadStatus;
   error: string | null;
 
-  // Fetches the user's trip (if any) from the API. Call once on app
-  // mount — see components/layout/TripGate.tsx.
-  loadTrip: () => Promise<void>;
+  // Fetches the user's trips (list) and resolves+loads the active one (if
+  // any). Call once on app mount — see components/layout/TripGate.tsx.
+  loadTrips: () => Promise<void>;
+
+  // Switches which trip is active: persists it server-side, then loads
+  // that trip's full data into `trip`/`blocks`.
+  setActiveTrip: (tripId: string) => Promise<void>;
+
+  // Manual status field — see types/trip.ts's TripStatus. Updates both
+  // the list (`trips`) and, if this is the active trip, `trip` itself.
+  updateTripStatus: (tripId: string, status: TripStatus) => Promise<void>;
+
+  // Deletes a trip outright. If it was the active trip, the server clears
+  // User.activeTripId itself (see app/api/trips/[tripId]/route.ts) — this
+  // mirrors that locally rather than guessing a new active trip, so the
+  // UI falls back to its own "pick a trip" empty state.
+  deleteTrip: (tripId: string) => Promise<void>;
 
   // Trip lifecycle — wired to the real API.
   createTrip: (input: CreateTripInput) => Promise<void>;
@@ -105,22 +140,77 @@ function errorMessage(err: unknown): string {
 }
 
 export const useTripStore = create<TripState>()((set, get) => ({
+      trips: [],
+      activeTripId: null,
       trip: null,
       blocks: {},
       status: "idle",
       error: null,
 
-      loadTrip: async () => {
+      loadTrips: async () => {
         set({ status: "loading", error: null });
         try {
-          const result = await tripRepository.findExistingTrip();
-          if (!result) {
-            set({ trip: null, blocks: {}, status: "ready" });
+          const [trips, activeTripId] = await Promise.all([
+            tripRepository.listTripSummaries(),
+            tripRepository.getActiveTripId(),
+          ]);
+
+          if (trips.length === 0) {
+            set({ trips: [], activeTripId: null, trip: null, blocks: {}, status: "ready" });
             return;
           }
-          set({ trip: result.trip, blocks: result.blocks, status: "ready" });
+
+          // Same fallback as tripRepository.findExistingTrip: prefer the
+          // explicitly-set active trip, but fall back to the first trip
+          // in the list so an existing single-trip user (who never had to
+          // choose an active one) keeps working with zero behavior change.
+          const resolvedId = activeTripId && trips.some((t) => t.id === activeTripId) ? activeTripId : trips[0].id;
+          const full = await tripRepository.fetchFullTrip(resolvedId);
+          set({ trips, activeTripId: resolvedId, trip: full.trip, blocks: full.blocks, status: "ready" });
         } catch (err) {
           set({ status: "error", error: errorMessage(err) });
+        }
+      },
+
+      setActiveTrip: async (tripId) => {
+        try {
+          await tripRepository.setActiveTripId(tripId);
+          const full = await tripRepository.fetchFullTrip(tripId);
+          set({ activeTripId: tripId, trip: full.trip, blocks: full.blocks });
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
+      },
+
+      updateTripStatus: async (tripId, status) => {
+        try {
+          const updated = await tripRepository.updateTripBasics(tripId, { status: STATUS_TO_API[status] });
+          set((state) => ({
+            trips: state.trips.map((t) => (t.id === tripId ? { ...t, status: updated.status } : t)),
+            trip: state.trip && state.trip.id === tripId ? touch({ ...state.trip, status: updated.status }) : state.trip,
+          }));
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
+        }
+      },
+
+      deleteTrip: async (tripId) => {
+        try {
+          await tripRepository.deleteTrip(tripId);
+          set((state) => {
+            const wasActive = state.activeTripId === tripId;
+            return {
+              trips: state.trips.filter((t) => t.id !== tripId),
+              activeTripId: wasActive ? null : state.activeTripId,
+              trip: wasActive ? null : state.trip,
+              blocks: wasActive ? {} : state.blocks,
+            };
+          });
+        } catch (err) {
+          set({ error: errorMessage(err) });
+          throw err;
         }
       },
 
@@ -128,7 +218,17 @@ export const useTripStore = create<TripState>()((set, get) => ({
         set({ status: "loading", error: null });
         try {
           const trip = await tripRepository.createTrip(input);
-          set({ trip, blocks: {}, status: "ready" });
+          // A freshly created trip is the obvious thing to want active —
+          // set it so, matching what a single-trip user already saw
+          // (their one trip was always "the" trip with zero extra steps).
+          await tripRepository.setActiveTripId(trip.id);
+          set((state) => ({
+            trips: [...state.trips, { id: trip.id, destination: trip.destination, departureDate: trip.departureDate, returnDate: trip.returnDate, status: trip.status }],
+            activeTripId: trip.id,
+            trip,
+            blocks: {},
+            status: "ready",
+          }));
         } catch (err) {
           set({ status: "error", error: errorMessage(err) });
           throw err;

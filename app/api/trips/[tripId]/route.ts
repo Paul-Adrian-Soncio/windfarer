@@ -69,6 +69,24 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const ownership = await requireTripOwnership(request, tripId);
   if (isAuthResponse(ownership)) return ownership;
 
+  // User.activeTripId is a plain column, not a Prisma relation — deleting
+  // the trip it points at won't clear it automatically. Null it out here
+  // rather than leaving it dangling; the frontend's next load falls back
+  // to its own "no active trip" empty state instead of the server
+  // guessing which remaining trip (if any) should become active next.
+  //
+  // Queried straight from Prisma rather than off the Better Auth session
+  // object — Better Auth's session.user only exposes its own core fields
+  // (id, email, name, ...) unless activeTripId is registered via
+  // user.additionalFields in lib/auth.ts, which it isn't.
+  const owner = await prisma.user.findUnique({ where: { id: ownership.userId }, select: { activeTripId: true } });
+  if (owner?.activeTripId === tripId) {
+    await prisma.user.update({
+      where: { id: ownership.userId },
+      data: { activeTripId: null },
+    });
+  }
+
   await prisma.trip.delete({ where: { id: tripId } });
 
   return new NextResponse(null, { status: 204 });

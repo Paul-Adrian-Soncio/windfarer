@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// Manual, not auto-derived from dates — see schema.prisma's TripStatus
+// comment for why. Keep this list in sync with that enum.
+export const tripStatusSchema = z.enum(["SCHEDULED", "ONGOING", "COMPLETE", "CANCELLED"]);
+
 // Shape of an incoming "create a trip" request body. Mirrors the required
 // fields on the Trip model — everything not listed here is optional at the
 // database level and can be added via a later PATCH.
@@ -37,6 +41,7 @@ export type CreateTripInput = z.infer<typeof createTripSchema>;
 export const updateTripSchema = createTripSchema.partial().extend({
   currency: z.string().length(3).optional(),
   totalBudget: z.number().nullable().optional(),
+  status: tripStatusSchema.optional(),
 });
 
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;

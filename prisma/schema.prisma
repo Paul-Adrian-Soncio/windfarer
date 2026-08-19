@@ -53,6 +53,13 @@ enum BudgetScopeKind {
   BLOCK
 }
 
+enum TripStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETE
+  CANCELLED
+}
+
 // ---------- Models ----------
 
 // Real accounts, via Better Auth's Prisma adapter (lib/auth.ts). The core
@@ -69,6 +76,13 @@ model User {
   image         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // Which of this user's trips is "active" — drives what Home/Planner/
+  // Itinerary/Budget show by default. Plain nullable column, not a Prisma
+  // relation back to Trip, so deleting a trip never has to fight a FK
+  // constraint on this column; the DELETE route clears it explicitly
+  // instead (see app/api/trips/[tripId]/route.ts).
+  activeTripId String?
 
   trips    Trip[]
   sessions Session[]
@@ -149,6 +163,10 @@ model Trip {
 
   totalBudget Decimal? @db.Decimal(12, 2)
   currency    String   @default("USD")
+
+  // Manual, not auto-derived from dates — see prisma/migrations for the
+  // rationale (dates alone can't tell "cancelled" from "scheduled").
+  status TripStatus @default(SCHEDULED)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

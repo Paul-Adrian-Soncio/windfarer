@@ -18,6 +18,7 @@ import {
   ItineraryDay,
   LocalTravelMode,
   Trip,
+  TripSummary,
   TravelSegment,
 } from "@/types";
 
@@ -186,7 +187,7 @@ function translateItineraryDayWithBlocks(api: ApiItineraryDayWithBlocks): {
 /** Trip's own fields, before any relations (segments, allocations, etc.) are attached. */
 type TripBasics = Pick<
   Trip,
-  "id" | "destination" | "departureDate" | "departureTime" | "arrivalDate" | "arrivalTime" | "returnDate" | "returnTime" | "createdAt" | "updatedAt"
+  "id" | "destination" | "departureDate" | "departureTime" | "arrivalDate" | "arrivalTime" | "returnDate" | "returnTime" | "status" | "createdAt" | "updatedAt"
 > & {
   budget: Omit<Trip["budget"], "allocations">;
 };
@@ -208,12 +209,29 @@ export function translateTripBasics(api: ApiTrip): TripBasics {
     arrivalTime: api.arrivalTime ?? undefined,
     returnDate: toDateOnly(api.returnDate),
     returnTime: api.returnTime ?? undefined,
+    status: toLowerEnum(api.status),
     budget: {
       totalBudget: decimalToNumber(api.totalBudget) ?? null,
       currency: api.currency,
     },
     createdAt: api.createdAt,
     updatedAt: api.updatedAt,
+  };
+}
+
+/**
+ * Lightweight translation for the Home screen's trip list — just enough
+ * to render a row, no relations. Used for every trip in GET /api/trips'
+ * response, not just the active one (see translateTripBasics/translateFullTrip
+ * for the "one active trip, fully loaded" shape).
+ */
+export function translateTripSummary(api: ApiTrip): TripSummary {
+  return {
+    id: api.id,
+    destination: { name: api.destinationName, lat: api.destinationLat, lng: api.destinationLng },
+    departureDate: toDateOnly(api.departureDate),
+    returnDate: toDateOnly(api.returnDate),
+    status: toLowerEnum(api.status),
   };
 }
 

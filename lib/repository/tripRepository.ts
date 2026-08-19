@@ -1,9 +1,17 @@
-import { createTripApi, listTripsApi, updateTripApi, UpdateTripBody } from "./createTrip";
+import {
+  createTripApi,
+  listTripsApi,
+  updateTripApi,
+  deleteTripApi,
+  getActiveTripIdApi,
+  setActiveTripIdApi,
+  UpdateTripBody,
+} from "./createTrip";
 import { apiFetch } from "./apiClient";
 import { ApiFullTrip } from "./apiTypes";
-import { translateFullTrip, translateNewTrip, TranslatedTrip } from "./translate";
+import { translateFullTrip, translateNewTrip, translateTripSummary, TranslatedTrip } from "./translate";
 import { CreateTripInput } from "@/store/tripStore";
-import { Trip } from "@/types";
+import { Trip, TripSummary } from "@/types";
 
 /**
  * Fetches a trip with everything nested (segments, accommodations,
@@ -18,18 +26,36 @@ export async function fetchFullTrip(tripId: string): Promise<TranslatedTrip> {
 }
 
 /**
- * There's no auth yet, so there's no notion of "my trips" server-side —
- * every trip currently belongs to the one hardcoded test user (see
- * app/api/trips/route.ts). Lists all trips and returns the first one's
- * FULL data (segments, days, etc. may already exist from a previous
- * session), if any — matching today's single-active-trip frontend model.
- * Once auth exists this is exactly the seam that changes to "my trips,"
- * not the store logic that calls it.
+ * Lightweight list of everything the signed-in user owns, for the Home
+ * screen's trip list — see types/trip.ts's TripSummary and
+ * translate.ts's translateTripSummary for why this doesn't fetch full
+ * nested data for every trip.
+ */
+export async function listTripSummaries(): Promise<TripSummary[]> {
+  const trips = await listTripsApi();
+  return trips.map(translateTripSummary);
+}
+
+export { getActiveTripIdApi as getActiveTripId, setActiveTripIdApi as setActiveTripId };
+
+export async function deleteTrip(tripId: string): Promise<void> {
+  await deleteTripApi(tripId);
+}
+
+/**
+ * Resolves which trip should load as "the" active trip, and fetches its
+ * full data. Prefers the user's explicitly-set activeTripId (see
+ * app/api/user/active-trip); falls back to the first trip in the list if
+ * none is set yet (e.g. an existing single-trip user who never had to
+ * choose) — this keeps that case working with zero behavior change. Returns
+ * null only when the user has no trips at all.
  */
 export async function findExistingTrip(): Promise<TranslatedTrip | null> {
-  const trips = await listTripsApi();
+  const [trips, activeTripId] = await Promise.all([listTripsApi(), getActiveTripIdApi()]);
   if (trips.length === 0) return null;
-  return fetchFullTrip(trips[0].id);
+
+  const targetId = activeTripId && trips.some((t) => t.id === activeTripId) ? activeTripId : trips[0].id;
+  return fetchFullTrip(targetId);
 }
 
 // A brand-new trip has no nested data yet, so the bare create response is

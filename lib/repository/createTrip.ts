@@ -53,6 +53,7 @@ export interface UpdateTripBody {
   returnTime?: string;
   totalBudget?: number | null;
   currency?: string;
+  status?: "SCHEDULED" | "ONGOING" | "COMPLETE" | "CANCELLED";
 }
 
 export async function updateTripApi(tripId: string, body: UpdateTripBody): Promise<ApiTrip> {
@@ -64,4 +65,21 @@ export async function updateTripApi(tripId: string, body: UpdateTripBody): Promi
 
 export async function listTripsApi(): Promise<ApiTrip[]> {
   return apiFetch<ApiTrip[]>("/api/trips");
+}
+
+export async function deleteTripApi(tripId: string): Promise<void> {
+  await apiFetch<void>(`/api/trips/${tripId}`, { method: "DELETE" });
+}
+
+export async function getActiveTripIdApi(): Promise<string | null> {
+  const result = await apiFetch<{ activeTripId: string | null }>("/api/user/active-trip");
+  return result.activeTripId;
+}
+
+export async function setActiveTripIdApi(tripId: string | null): Promise<string | null> {
+  const result = await apiFetch<{ activeTripId: string | null }>("/api/user/active-trip", {
+    method: "PATCH",
+    body: JSON.stringify({ tripId }),
+  });
+  return result.activeTripId;
 }
