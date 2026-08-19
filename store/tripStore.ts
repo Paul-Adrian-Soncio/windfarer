@@ -151,12 +151,38 @@ export const useTripStore = create<TripState>()((set, get) => ({
             returnDate: patch.returnDate,
             returnTime: patch.returnTime,
           });
-          // The API only knows about the Trip row's own fields — merge the
-          // response into the existing trip rather than replacing it, so
-          // segments/days/etc. (not part of this response) aren't dropped.
-          set((state) => ({
-            trip: state.trip ? { ...state.trip, ...updated } : state.trip,
-          }));
+          // `updated` comes back through translateNewTrip (same translator
+          // used right after creating a trip), which always defaults every
+          // relation — travelSegments, accommodations, advanceBookings,
+          // itineraryDays, budget.allocations — to []. That's correct for a
+          // brand-new trip, but PATCH /api/trips/[tripId] only ever touches
+          // the Trip row's own columns, so those empty arrays here don't
+          // mean "these are now empty" — they mean "this response doesn't
+          // know about them." Spreading `updated` over `state.trip` would
+          // wipe out everything already loaded. Pick only the fields PATCH
+          // actually returns fresh data for, instead of the whole object.
+          set((state) =>
+            state.trip
+              ? {
+                  trip: {
+                    ...state.trip,
+                    destination: updated.destination,
+                    departureDate: updated.departureDate,
+                    departureTime: updated.departureTime,
+                    arrivalDate: updated.arrivalDate,
+                    arrivalTime: updated.arrivalTime,
+                    returnDate: updated.returnDate,
+                    returnTime: updated.returnTime,
+                    updatedAt: updated.updatedAt,
+                    budget: {
+                      ...state.trip.budget,
+                      totalBudget: updated.budget.totalBudget,
+                      currency: updated.budget.currency,
+                    },
+                  },
+                }
+              : state
+          );
         } catch (err) {
           set({ error: errorMessage(err) });
           throw err;
