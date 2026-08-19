@@ -87,8 +87,16 @@ export function DatePicker({ value, onChange, minDate, required, placeholder = "
               day_button: "flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-2",
               today: "font-semibold text-primary-700",
               selected: "[&>button]:bg-primary-700 [&>button]:text-white [&>button]:hover:bg-primary-700",
-              outside: "text-ink-300",
-              disabled: "text-ink-300 pointer-events-none",
+              // `day`'s own text-ink-900 and these color classes both land
+              // on the day cell, not the inner <button> that actually
+              // renders the number — plain string-join cn() (see lib/cn.ts)
+              // doesn't dedupe/override conflicting utilities the way
+              // tailwind-merge would, so a same-element override loses to
+              // day's color unpredictably. Reaching into the child button
+              // directly (same [&>button]: pattern already used above for
+              // `selected`) sidesteps that fight entirely.
+              outside: "[&>button]:text-ink-300",
+              disabled: "pointer-events-none [&>button]:text-ink-300 [&>button]:hover:bg-transparent",
             }}
           />
         </div>
