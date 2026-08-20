@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Topography } from "@/components/ui/Topography";
 import { Logo } from "@/components/ui/Logo";
+import { Footer } from "@/components/layout/Footer";
 
 const CORE_FEATURES = [
   {
@@ -202,9 +203,7 @@ export default function WelcomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-hair py-6 text-center text-[12.5px] text-ink-500">
-        WindFarer — your journey, planned with a friend.
-      </footer>
+      <Footer variant="welcome" />
     </div>
   );
 }
