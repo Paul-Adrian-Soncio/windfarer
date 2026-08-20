@@ -1,13 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { useSession, signOut } from "@/lib/auth-client";
 import { Logo } from "@/components/ui/Logo";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 export function AppHeader() {
   const { data: session } = useSession();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   async function handleSignOut() {
+    setSigningOut(true);
     await signOut();
     // Full navigation, not router.push — see the matching note in
     // app/sign-in/page.tsx for why the client router can race the session
@@ -38,7 +44,7 @@ export function AppHeader() {
         </div>
         {session && (
           <button
-            onClick={handleSignOut}
+            onClick={() => setConfirmOpen(true)}
             className="ml-auto flex shrink-0 items-center gap-1.5 rounded-pill border-[1.5px] border-white/25 px-3 py-1.5 text-[12.5px] text-[#F1EFE6] transition-colors hover:bg-white/10"
           >
             <span className="hidden sm:inline">{session.user.email}</span>
@@ -46,6 +52,24 @@ export function AppHeader() {
           </button>
         )}
       </div>
+
+      <Modal
+        open={confirmOpen}
+        onClose={() => (signingOut ? undefined : setConfirmOpen(false))}
+        title="Sign out?"
+      >
+        <p className="text-sm text-ink-500">
+          You&apos;ll need to sign back in to see your trips again.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setConfirmOpen(false)} disabled={signingOut}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleSignOut} disabled={signingOut}>
+            {signingOut ? "Signing out…" : "Sign out"}
+          </Button>
+        </div>
+      </Modal>
     </header>
   );
 }
