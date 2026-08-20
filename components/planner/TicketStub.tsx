@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { fmtMoney } from "@/lib/money";
 import { cn } from "@/lib/cn";
 
@@ -11,6 +11,7 @@ interface TicketStubProps {
   currency: string;
   seatOrRef?: string;
   badges?: ReactNode;
+  onEdit: () => void;
   onRemove: () => void;
   className?: string;
 }
@@ -20,7 +21,7 @@ interface TicketStubProps {
  * mode icon / title / route / badges, and a perforated stub with fare + a
  * seat/reference line — see §5 of the Trailhead redesign brief.
  */
-export function TicketStub({ icon, title, route, cost, currency, seatOrRef, badges, onRemove, className }: TicketStubProps) {
+export function TicketStub({ icon, title, route, cost, currency, seatOrRef, badges, onEdit, onRemove, className }: TicketStubProps) {
   return (
     <div className={cn("relative flex overflow-hidden rounded-md border border-hair bg-surface shadow-[0_6px_16px_-12px_rgba(43,39,33,0.4)]", className)}>
       <div className="min-w-0 flex-1 p-4">
@@ -38,13 +39,22 @@ export function TicketStub({ icon, title, route, cost, currency, seatOrRef, badg
       <div className="relative flex w-[96px] shrink-0 flex-col justify-center gap-[3px] border-l-2 border-dashed border-hair bg-surface-2 p-3.5 text-right sm:w-[118px]">
         <span className="absolute -left-2 -top-2 h-3.5 w-3.5 rounded-full border border-hair bg-paper" />
         <span className="absolute -bottom-2 -left-2 h-3.5 w-3.5 rounded-full border border-hair bg-paper" />
-        <button
-          onClick={onRemove}
-          className="absolute right-[9px] top-2 rounded-lg p-1 text-ink-500 hover:bg-paper hover:text-danger-600"
-          aria-label="Remove leg"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="absolute right-[9px] top-2 flex items-center gap-0.5">
+          <button
+            onClick={onEdit}
+            className="rounded-lg p-1 text-ink-500 hover:bg-paper hover:text-primary-700"
+            aria-label="Edit leg"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onRemove}
+            className="rounded-lg p-1 text-ink-500 hover:bg-paper hover:text-danger-600"
+            aria-label="Remove leg"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <span className="font-mono text-[9px] tracking-[.08em] text-ink-500">FARE</span>
         <span className="font-display text-[17px] font-bold text-ink-900">
           {cost !== undefined ? fmtMoney(cost, currency) : "—"}

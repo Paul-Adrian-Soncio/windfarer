@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface ListRowProps {
@@ -8,12 +8,13 @@ interface ListRowProps {
   meta?: ReactNode;
   price?: ReactNode;
   notes?: ReactNode;
+  onEdit: () => void;
   onRemove: () => void;
   className?: string;
 }
 
 /** The mockup's generic list row: slate icon square, display title, mono meta line, display price. */
-export function ListRow({ icon, title, meta, price, notes, onRemove, className }: ListRowProps) {
+export function ListRow({ icon, title, meta, price, notes, onEdit, onRemove, className }: ListRowProps) {
   return (
     <div
       className={cn(
@@ -30,13 +31,22 @@ export function ListRow({ icon, title, meta, price, notes, onRemove, className }
         {price && <div className="mt-1.5 font-display text-[15px] font-bold text-ink-900">{price}</div>}
         {notes && <div className="mt-1 text-xs text-ink-500">{notes}</div>}
       </div>
-      <button
-        onClick={onRemove}
-        className="ml-auto shrink-0 rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-danger-600"
-        aria-label="Remove"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+      <div className="ml-auto flex shrink-0 items-center gap-0.5">
+        <button
+          onClick={onEdit}
+          className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-primary-700"
+          aria-label="Edit"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onRemove}
+          className="rounded-lg p-1.5 text-ink-500 hover:bg-paper hover:text-danger-600"
+          aria-label="Remove"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

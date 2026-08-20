@@ -3,40 +3,21 @@
 import { useState } from "react";
 import { Plus, Ticket } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Field, Input, Textarea } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ListRow } from "./ListRow";
+import { AdvanceBookingForm } from "./AdvanceBookingForm";
 import { useTripStore } from "@/store/tripStore";
 import { fmtMoney } from "@/lib/money";
 import { Trip } from "@/types";
 
 export function AdvanceBookingList({ trip }: { trip: Trip }) {
   const addAdvanceBooking = useTripStore((s) => s.addAdvanceBooking);
+  const updateAdvanceBooking = useTripStore((s) => s.updateAdvanceBooking);
   const removeAdvanceBooking = useTripStore((s) => s.removeAdvanceBooking);
   const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [cost, setCost] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title) return;
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await addAdvanceBooking({ title, notes: notes || undefined, cost: cost ? Number(cost) : undefined });
-      setTitle("");
-      setNotes("");
-      setCost("");
-      setShowForm(false);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const editingBooking = editingId ? trip.advanceBookings.find((b) => b.id === editingId) : undefined;
 
   return (
     <Card>
@@ -52,29 +33,19 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
         )}
       </CardHeader>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-4">
-          <Field label="What did you book?">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Museum tickets, cooking class" required />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Notes (optional)">
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Confirmation number, time, etc." />
-            </Field>
-            <Field label="Cost (optional)">
-              <Input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
-            </Field>
-          </div>
-          {submitError && <p className="text-sm text-danger-600">{submitError}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding…" : "Add booking"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setShowForm(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-          </div>
-        </form>
+      <AdvanceBookingForm
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(b) => addAdvanceBooking(b)}
+      />
+
+      {editingBooking && (
+        <AdvanceBookingForm
+          open
+          initial={editingBooking}
+          onClose={() => setEditingId(null)}
+          onSubmit={(patch) => updateAdvanceBooking(editingBooking.id, patch)}
+        />
       )}
 
       {trip.advanceBookings.length === 0 && !showForm && (
@@ -89,6 +60,7 @@ export function AdvanceBookingList({ trip }: { trip: Trip }) {
             title={b.title}
             price={b.cost !== undefined ? fmtMoney(b.cost, trip.budget.currency) : undefined}
             notes={b.notes}
+            onEdit={() => setEditingId(b.id)}
             onRemove={() => removeAdvanceBooking(b.id).catch(() => {})}
           />
         ))}

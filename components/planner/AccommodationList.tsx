@@ -14,15 +14,19 @@ import { Trip } from "@/types";
 
 export function AccommodationList({ trip }: { trip: Trip }) {
   const addAccommodation = useTripStore((s) => s.addAccommodation);
+  const updateAccommodation = useTripStore((s) => s.updateAccommodation);
   const removeAccommodation = useTripStore((s) => s.removeAccommodation);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const editingAcc = editingId ? trip.accommodations.find((a) => a.id === editingId) : undefined;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>
           <Hotel className="h-[19px] w-[19px] text-primary-700" strokeWidth={1.9} />
-          Where you'll stay
+          Where you&apos;ll stay
         </CardTitle>
         {!showForm && (
           <Button size="sm" variant="secondary" onClick={() => setShowForm(true)}>
@@ -31,16 +35,19 @@ export function AccommodationList({ trip }: { trip: Trip }) {
         )}
       </CardHeader>
 
-      {showForm && (
-        <div className="mb-4">
-          <AccommodationForm
-            onSubmit={async (acc) => {
-              await addAccommodation(acc);
-              setShowForm(false);
-            }}
-            onCancel={() => setShowForm(false)}
-          />
-        </div>
+      <AccommodationForm
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(acc) => addAccommodation(acc)}
+      />
+
+      {editingAcc && (
+        <AccommodationForm
+          open
+          initial={editingAcc}
+          onClose={() => setEditingId(null)}
+          onSubmit={(patch) => updateAccommodation(editingAcc.id, patch)}
+        />
       )}
 
       {trip.accommodations.length === 0 && !showForm && (
@@ -65,6 +72,7 @@ export function AccommodationList({ trip }: { trip: Trip }) {
             meta={`${acc.place.name.toUpperCase()} · ${formatShortDate(acc.checkIn)} → ${formatShortDate(acc.checkOut)}`}
             price={acc.cost !== undefined ? fmtMoney(acc.cost, trip.budget.currency) : undefined}
             notes={acc.notes}
+            onEdit={() => setEditingId(acc.id)}
             onRemove={() => removeAccommodation(acc.id).catch(() => {})}
           />
         ))}

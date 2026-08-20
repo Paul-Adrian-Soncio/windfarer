@@ -24,8 +24,14 @@ function isMealsIncluded(value: boolean | string | undefined): boolean {
 
 export function TravelSegmentList({ trip }: { trip: Trip }) {
   const addTravelSegment = useTripStore((s) => s.addTravelSegment);
+  const updateTravelSegment = useTripStore((s) => s.updateTravelSegment);
   const removeTravelSegment = useTripStore((s) => s.removeTravelSegment);
   const [showForm, setShowForm] = useState(false);
+  const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
+
+  const editingSegment = editingSegmentId
+    ? trip.travelSegments.find((s) => s.id === editingSegmentId)
+    : undefined;
 
   return (
     <Card>
@@ -38,16 +44,21 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
         )}
       </CardHeader>
 
-      {showForm && (
-        <div className="mb-4">
-          <TravelSegmentForm
-            onSubmit={(segment) => {
-              addTravelSegment(segment);
-              setShowForm(false);
-            }}
-            onCancel={() => setShowForm(false)}
-          />
-        </div>
+      <TravelSegmentForm
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={async (segment) => {
+          await addTravelSegment(segment);
+        }}
+      />
+
+      {editingSegment && (
+        <TravelSegmentForm
+          open
+          initial={editingSegment}
+          onClose={() => setEditingSegmentId(null)}
+          onSubmit={(patch) => updateTravelSegment(editingSegment.id, patch)}
+        />
       )}
 
       {trip.travelSegments.length === 0 && !showForm && (
@@ -70,6 +81,7 @@ export function TravelSegmentList({ trip }: { trip: Trip }) {
                 route={route}
                 cost={segment.cost}
                 currency={trip.budget.currency}
+                onEdit={() => setEditingSegmentId(segment.id)}
                 onRemove={() => {
                   // Fire-and-forget: the store already records the failure
                   // in its shared `error` state; this .catch just prevents
