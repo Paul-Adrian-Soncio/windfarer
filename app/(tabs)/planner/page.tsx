@@ -34,11 +34,15 @@ export default function PlannerPage() {
 
   // Once a trip becomes active again (the new trip's own createTrip
   // resolved), drop back into "editing the active trip" mode automatically
-  // rather than leaving the form stuck in create mode.
-  useEffect(() => {
+  // rather than leaving the form stuck in create mode. Tracked here
+  // instead of a setState-in-effect: whenever the active trip's id
+  // changes out from under `creatingNew`, treat that as the signal to
+  // exit create mode, without a render-then-correct round trip.
+  const [lastSeenTripId, setLastSeenTripId] = useState(trip?.id);
+  if (trip?.id !== lastSeenTripId) {
+    setLastSeenTripId(trip?.id);
     if (creatingNew && trip) setCreatingNew(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip?.id]);
+  }
 
   if (status === "idle" || status === "loading") {
     return <div className="py-24 text-center text-sm text-ink-500">Loading your trip…</div>;

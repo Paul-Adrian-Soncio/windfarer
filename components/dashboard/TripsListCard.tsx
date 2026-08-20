@@ -128,7 +128,7 @@ export function TripsListCard() {
       >
         <p className="text-sm text-ink-500">
           {pendingDelete?.destination.name || "This trip"} and everything in it — travel, itinerary, budget — will
-          be permanently deleted. This can't be undone.
+          be permanently deleted. This can&apos;t be undone.
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setPendingDelete(null)} disabled={deleting}>

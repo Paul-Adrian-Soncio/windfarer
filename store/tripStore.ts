@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { generateId } from "@/lib/id";
 import * as tripRepository from "@/lib/repository/tripRepository";
 import * as travelSegmentRepository from "@/lib/repository/travelSegmentRepository";
 import * as accommodationRepository from "@/lib/repository/accommodationRepository";
@@ -535,7 +534,7 @@ export const useTripStore = create<TripState>()((set, get) => ({
       },
 
       addBlock: async (dayId, block, index) => {
-        const { trip, blocks } = get();
+        const { trip } = get();
         if (!trip) return;
         const day = trip.itineraryDays.find((d) => d.id === dayId);
         if (!day) return;
